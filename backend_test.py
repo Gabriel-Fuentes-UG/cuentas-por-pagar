@@ -76,6 +76,38 @@ class InvoiceAPITester:
         success2, _ = self.run_test("Get Resumen General", "GET", "resumen/general", 200)
         return success1 and success2
 
+    def test_estado_cuenta_pagadas(self):
+        """Test the new Estado de Cuenta Pagadas endpoint"""
+        success, response_data = self.run_test("Get Estado Cuenta Pagadas", "GET", "estado-cuenta/pagadas", 200)
+        
+        if success and response_data:
+            # Validate response structure
+            required_fields = ['total_pagado', 'cantidad_facturas_pagadas', 'facturas_por_proveedor', 'facturas_pagadas']
+            for field in required_fields:
+                if field not in response_data:
+                    print(f"❌ Missing required field: {field}")
+                    return False
+            
+            print(f"   ✅ Total Pagado: ${response_data['total_pagado']:,.2f}")
+            print(f"   ✅ Cantidad Facturas Pagadas: {response_data['cantidad_facturas_pagadas']}")
+            print(f"   ✅ Proveedores con Facturas Pagadas: {len(response_data['facturas_por_proveedor'])}")
+            print(f"   ✅ Facturas Pagadas Detalle: {len(response_data['facturas_pagadas'])}")
+            
+            # Validate that totals make sense
+            if response_data['cantidad_facturas_pagadas'] != len(response_data['facturas_pagadas']):
+                print(f"❌ Mismatch: cantidad_facturas_pagadas ({response_data['cantidad_facturas_pagadas']}) != len(facturas_pagadas) ({len(response_data['facturas_pagadas'])})")
+                return False
+            
+            # Calculate total from individual invoices to verify
+            calculated_total = sum(factura['monto'] for factura in response_data['facturas_pagadas'])
+            if abs(calculated_total - response_data['total_pagado']) > 0.01:  # Allow small floating point differences
+                print(f"❌ Total mismatch: calculated {calculated_total} != reported {response_data['total_pagado']}")
+                return False
+            
+            print("   ✅ All validations passed for Estado Cuenta Pagadas")
+        
+        return success
+
     def create_test_pdf(self):
         """Create a simple test PDF file"""
         try:
