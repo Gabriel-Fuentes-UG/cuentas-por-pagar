@@ -308,13 +308,16 @@ def main():
     tester = InvoiceAPITester()
     
     # Run all tests
+    print("\n🏢 Testing Company Endpoints...")
+    tester.test_empresas_endpoints()
+    
     print("\n📋 Testing Basic Endpoints...")
     tester.test_root_endpoint()
     tester.test_get_invoices_empty()
     tester.test_get_invoices_with_filters()
     tester.test_resumen_endpoints()
     
-    print("\n💰 Testing Estado Cuenta Pagadas (NEW FUNCTIONALITY)...")
+    print("\n💰 Testing Estado Cuenta Pagadas...")
     tester.test_estado_cuenta_pagadas()
     
     print("\n📄 Testing PDF Upload...")
@@ -322,6 +325,12 @@ def main():
     
     print("\n🔄 Testing Invoice Status Updates...")
     tester.test_update_invoice_status()
+    
+    print("\n📥 Testing NEW PDF Download Functionality...")
+    tester.test_download_invoice_pdf()
+    
+    print("\n🗑️  Testing NEW Invoice Deletion Functionality...")
+    tester.test_delete_invoice()
     
     print("\n❌ Testing Error Handling...")
     tester.test_invalid_endpoints()
