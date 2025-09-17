@@ -21,6 +21,7 @@ function App() {
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   const [resumenGeneral, setResumenGeneral] = useState(null);
+  const [estadoCuentaPagadas, setEstadoCuentaPagadas] = useState(null);
   const [filterEstado, setFilterEstado] = useState("todos");
   const [filterProveedor, setFilterProveedor] = useState("");
   const { toast } = useToast();
