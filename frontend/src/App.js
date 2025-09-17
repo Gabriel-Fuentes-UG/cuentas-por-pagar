@@ -47,6 +47,19 @@ function App() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
   
+  // Estados para gestión de empresas
+  const [showEditEmpresaDialog, setShowEditEmpresaDialog] = useState(false);
+  const [showDeleteEmpresaDialog, setShowDeleteEmpresaDialog] = useState(false);
+  const [empresaToEdit, setEmpresaToEdit] = useState(null);
+  const [empresaToDelete, setEmpresaToDelete] = useState(null);
+  const [editEmpresaData, setEditEmpresaData] = useState({
+    nombre: "",
+    rut_cuit: "",
+    direccion: "",
+    telefono: "",
+    email: ""
+  });
+  
   const { toast } = useToast();
 
   // Cargar empresas al iniciar
