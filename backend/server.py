@@ -294,11 +294,16 @@ async def upload_pdf(empresa_id: str, file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Error procesando el PDF: {str(e)}")
 
 
-@api_router.get("/invoices", response_model=List[Invoice])
-async def get_invoices(estado: Optional[str] = None, proveedor: Optional[str] = None):
-    """Obtiene todas las facturas con filtros opcionales"""
+@api_router.get("/invoices/{empresa_id}", response_model=List[Invoice])
+async def get_invoices(empresa_id: str, estado: Optional[str] = None, proveedor: Optional[str] = None):
+    """Obtiene todas las facturas de una empresa con filtros opcionales"""
     try:
-        filter_query = {}
+        # Verificar que la empresa existe
+        empresa = await db.empresas.find_one({"id": empresa_id, "activa": True})
+        if not empresa:
+            raise HTTPException(status_code=404, detail="Empresa no encontrada")
+        
+        filter_query = {"empresa_id": empresa_id}
         
         if estado:
             filter_query['estado_pago'] = estado
@@ -308,6 +313,8 @@ async def get_invoices(estado: Optional[str] = None, proveedor: Optional[str] = 
         invoices = await db.invoices.find(filter_query).to_list(1000)
         return [Invoice(**parse_from_mongo(invoice)) for invoice in invoices]
         
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error obteniendo facturas: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
