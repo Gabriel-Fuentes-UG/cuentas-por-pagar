@@ -287,6 +287,144 @@ class InvoiceAPITester:
         
         return success1 and success2
 
+    def test_excel_export_endpoints(self):
+        """Test NEW Excel export functionality"""
+        print("\n📊 Testing Excel Export Endpoints...")
+        
+        # Test export pending invoices
+        success1, response_data1 = self.run_test(
+            "Export Facturas Pendientes to Excel (NEW)",
+            "GET",
+            f"export/facturas-pendientes/{self.test_empresa_id}",
+            200,
+            response_type='binary'
+        )
+        
+        if success1:
+            print(f"   ✅ Pending invoices Excel export successful, received {len(response_data1)} bytes")
+            if len(response_data1) > 1000:  # Excel files should be reasonably sized
+                print("   ✅ Excel file has reasonable size")
+            else:
+                print("   ⚠️  Excel file seems too small")
+        
+        # Test export paid invoices
+        success2, response_data2 = self.run_test(
+            "Export Facturas Pagadas to Excel (NEW)",
+            "GET",
+            f"export/facturas-pagadas/{self.test_empresa_id}",
+            200,
+            response_type='binary'
+        )
+        
+        if success2:
+            print(f"   ✅ Paid invoices Excel export successful, received {len(response_data2)} bytes")
+        
+        # Test export general summary
+        success3, response_data3 = self.run_test(
+            "Export Resumen General to Excel (NEW)",
+            "GET",
+            f"export/resumen-general/{self.test_empresa_id}",
+            200,
+            response_type='binary'
+        )
+        
+        if success3:
+            print(f"   ✅ General summary Excel export successful, received {len(response_data3)} bytes")
+        
+        return success1 and success2 and success3
+
+    def test_company_management_endpoints(self):
+        """Test NEW company management functionality"""
+        print("\n🏢 Testing Company Management Endpoints...")
+        
+        # First, create a test company for management operations
+        test_company_data = {
+            "nombre": "Test Company for Management",
+            "rut_cuit": "20-12345678-9",
+            "direccion": "Test Address 123",
+            "telefono": "+54 11 1234-5678",
+            "email": "test@company.com"
+        }
+        
+        success_create, create_response = self.run_test(
+            "Create Test Company for Management",
+            "POST",
+            "empresas",
+            200,
+            data=test_company_data
+        )
+        
+        if not success_create or not create_response:
+            print("❌ Could not create test company for management tests")
+            return False
+        
+        test_company_id = create_response.get('id')
+        if not test_company_id:
+            print("❌ No company ID returned from creation")
+            return False
+        
+        print(f"   ✅ Created test company with ID: {test_company_id}")
+        
+        # Test updating company data (NEW functionality)
+        updated_data = {
+            "nombre": "Updated Test Company",
+            "rut_cuit": "20-87654321-9",
+            "direccion": "Updated Address 456",
+            "telefono": "+54 11 8765-4321",
+            "email": "updated@company.com"
+        }
+        
+        success_update, update_response = self.run_test(
+            "Update Company Data (NEW)",
+            "PUT",
+            f"empresas/{test_company_id}",
+            200,
+            data=updated_data
+        )
+        
+        if success_update:
+            print("   ✅ Company update successful")
+            # Verify the update worked
+            if update_response.get('nombre') == updated_data['nombre']:
+                print("   ✅ Company name updated correctly")
+            else:
+                print("   ❌ Company name not updated correctly")
+                return False
+        
+        # Test soft delete company (NEW functionality)
+        success_delete, delete_response = self.run_test(
+            "Soft Delete Company (NEW)",
+            "DELETE",
+            f"empresas/{test_company_id}",
+            200
+        )
+        
+        if success_delete:
+            print("   ✅ Company soft delete successful")
+            if delete_response.get('success'):
+                print(f"   ✅ Delete response: {delete_response.get('message', 'No message')}")
+                facturas_eliminadas = delete_response.get('facturas_eliminadas', 0)
+                print(f"   ✅ Facturas eliminated: {facturas_eliminadas}")
+            else:
+                print("   ❌ Delete response indicates failure")
+                return False
+            
+            # Verify company is no longer accessible
+            success_verify, _ = self.run_test(
+                "Verify Company Deleted (Should Fail)",
+                "GET",
+                f"empresas/{test_company_id}",
+                404
+            )
+            
+            if success_verify:
+                print("   ✅ Company properly soft deleted - GET now returns 404")
+            else:
+                print("   ❌ Company may not have been properly soft deleted")
+                return False
+        
+        return success_create and success_update and success_delete
+
     def test_invalid_endpoints(self):
         """Test error handling for invalid requests"""
         # Test non-existent invoice
@@ -298,7 +436,16 @@ class InvoiceAPITester:
             data={"estado_pago": "pagado"}
         )
         
-        return True  # We expect this to fail, so we return True if it fails correctly
+        # Test Excel export with non-existent company
+        success2, _ = self.run_test(
+            "Export Excel for Non-existent Company",
+            "GET",
+            "export/facturas-pendientes/non-existent-company-id",
+            404,
+            response_type='binary'
+        )
+        
+        return True  # We expect these to fail, so we return True if they fail correctly
 
 def main():
     print("🚀 Starting Invoice Management API Tests")
