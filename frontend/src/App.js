@@ -774,6 +774,7 @@ function App() {
                           <TableHead>Fecha Factura</TableHead>
                           <TableHead>Monto Pagado</TableHead>
                           <TableHead>Archivo</TableHead>
+                          <TableHead>Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
