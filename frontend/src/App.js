@@ -982,10 +982,20 @@ function App() {
               {estadoCuentaPagadas && estadoCuentaPagadas.facturas_pagadas.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5" />
-                      Detalle de Facturas Pagadas
-                    </CardTitle>
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5" />
+                        Detalle de Facturas Pagadas
+                      </CardTitle>
+                      <Button 
+                        onClick={exportFacturasPagadas}
+                        variant="outline"
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <FileSpreadsheet className="h-4 w-4 mr-2" />
+                        Exportar a Excel
+                      </Button>
+                    </div>
                     <CardDescription>
                       Historial completo de todas las facturas marcadas como pagadas
                     </CardDescription>
