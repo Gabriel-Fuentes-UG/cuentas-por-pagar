@@ -103,7 +103,7 @@ async def upload_pdf(file: UploadFile = File(...)):
                 api_key=os.environ['EMERGENT_LLM_KEY'],
                 session_id=f"pdf-extract-{uuid.uuid4()}",
                 system_message="Eres un experto en extracción de datos de facturas. Extrae la información solicitada de manera precisa."
-            ).with_model("gemini", "gemini-2.5-pro-preview-05-06")
+            ).with_model("gemini", "gemini-2.0-flash-exp")
 
             # Crear el objeto de archivo para Gemini
             pdf_file = FileContentWithMimeType(
