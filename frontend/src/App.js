@@ -788,7 +788,21 @@ function App() {
                               {formatCurrency(factura.monto)}
                             </TableCell>
                             <TableCell className="text-sm text-slate-600">
-                              {factura.archivo_pdf || "N/A"}
+                              {factura.archivo_original || factura.archivo_pdf || "N/A"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                {factura.archivo_pdf && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => downloadInvoicePDF(factura.id, factura.numero_factura)}
+                                    className="text-blue-600 hover:text-blue-700"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
