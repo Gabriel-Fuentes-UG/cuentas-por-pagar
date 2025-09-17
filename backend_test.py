@@ -479,6 +479,12 @@ def main():
     print("\n🗑️  Testing NEW Invoice Deletion Functionality...")
     tester.test_delete_invoice()
     
+    print("\n📊 Testing NEW Excel Export Functionality...")
+    tester.test_excel_export_endpoints()
+    
+    print("\n🏢 Testing NEW Company Management Functionality...")
+    tester.test_company_management_endpoints()
+    
     print("\n❌ Testing Error Handling...")
     tester.test_invalid_endpoints()
     
