@@ -30,6 +30,7 @@ function App() {
   useEffect(() => {
     fetchInvoices();
     fetchResumenGeneral();
+    fetchEstadoCuentaPagadas();
   }, []);
 
   // Aplicar filtros
