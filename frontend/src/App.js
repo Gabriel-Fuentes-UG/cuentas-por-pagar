@@ -1019,6 +1019,38 @@ function App() {
         </Tabs>
       </div>
       
+      {/* Dialog de confirmación para eliminar factura */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Eliminación</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro que deseas eliminar la factura{" "}
+              <strong>{invoiceToDelete?.numero_factura}</strong> del proveedor{" "}
+              <strong>{invoiceToDelete?.nombre_proveedor}</strong>?
+              <br />
+              <br />
+              Esta acción no se puede deshacer y también eliminará el archivo PDF asociado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(false)} 
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={deleteInvoice} 
+              className="flex-1 bg-red-600 hover:bg-red-700"
+            >
+              Eliminar Factura
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
       <Toaster />
     </div>
   );
