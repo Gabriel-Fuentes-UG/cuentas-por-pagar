@@ -355,6 +355,77 @@ async def update_invoice_status(invoice_id: str, update: InvoiceUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.get("/invoices/{invoice_id}/download")
+async def download_invoice_pdf(invoice_id: str):
+    """Descarga el archivo PDF de una factura"""
+    try:
+        # Buscar la factura en la base de datos
+        invoice = await db.invoices.find_one({"id": invoice_id})
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Factura no encontrada")
+        
+        # Verificar que tiene archivo PDF
+        if not invoice.get('archivo_pdf'):
+            raise HTTPException(status_code=404, detail="No hay archivo PDF asociado a esta factura")
+        
+        # Construir la ruta del archivo
+        file_path = f"/app/uploads/{invoice['archivo_pdf']}"
+        
+        # Verificar que el archivo existe
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Archivo PDF no encontrado en el servidor")
+        
+        # Obtener el nombre original o usar uno por defecto
+        filename = invoice.get('archivo_original', f"factura_{invoice['numero_factura']}.pdf")
+        
+        # Retornar el archivo para descarga
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            media_type='application/pdf'
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error descargando PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error descargando el PDF: {str(e)}")
+
+
+@api_router.delete("/invoices/{invoice_id}")
+async def delete_invoice(invoice_id: str):
+    """Elimina una factura y su archivo PDF asociado"""
+    try:
+        # Buscar la factura en la base de datos
+        invoice = await db.invoices.find_one({"id": invoice_id})
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Factura no encontrada")
+        
+        # Eliminar el archivo PDF si existe
+        if invoice.get('archivo_pdf'):
+            file_path = f"/app/uploads/{invoice['archivo_pdf']}"
+            if os.path.exists(file_path):
+                try:
+                    os.unlink(file_path)
+                    logging.info(f"Archivo PDF eliminado: {file_path}")
+                except Exception as e:
+                    logging.warning(f"No se pudo eliminar el archivo PDF: {str(e)}")
+        
+        # Eliminar la factura de la base de datos
+        result = await db.invoices.delete_one({"id": invoice_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Factura no encontrada")
+        
+        return {"success": True, "message": "Factura eliminada correctamente"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error eliminando factura: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error eliminando la factura: {str(e)}")
+
+
 @api_router.get("/resumen/proveedor/{empresa_id}", response_model=List[ResumenProveedor])
 async def get_resumen_por_proveedor(empresa_id: str):
     """Obtiene resumen de deuda agrupado por proveedor para una empresa"""
