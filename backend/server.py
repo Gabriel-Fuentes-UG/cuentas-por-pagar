@@ -219,7 +219,7 @@ async def update_invoice_status(invoice_id: str, update: InvoiceUpdate):
             {"$set": {"estado_pago": update.estado_pago}}
         )
         
-        if result.modified_count == 0:
+        if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Factura no encontrada")
         
         return {"success": True, "message": "Estado actualizado correctamente"}
