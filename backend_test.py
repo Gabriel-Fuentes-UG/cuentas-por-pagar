@@ -70,23 +70,23 @@ class InvoiceAPITester:
 
     def test_get_invoices_empty(self):
         """Test getting invoices when database might be empty"""
-        return self.run_test("Get All Invoices", "GET", "invoices", 200)
+        return self.run_test("Get All Invoices", "GET", f"invoices/{self.test_empresa_id}", 200)
 
     def test_get_invoices_with_filters(self):
         """Test getting invoices with filters"""
-        success1, _ = self.run_test("Get Invoices - Filter by Estado", "GET", "invoices?estado=pendiente", 200)
-        success2, _ = self.run_test("Get Invoices - Filter by Proveedor", "GET", "invoices?proveedor=test", 200)
+        success1, _ = self.run_test("Get Invoices - Filter by Estado", "GET", f"invoices/{self.test_empresa_id}?estado=pendiente", 200)
+        success2, _ = self.run_test("Get Invoices - Filter by Proveedor", "GET", f"invoices/{self.test_empresa_id}?proveedor=test", 200)
         return success1 and success2
 
     def test_resumen_endpoints(self):
         """Test summary endpoints"""
-        success1, _ = self.run_test("Get Resumen por Proveedor", "GET", "resumen/proveedor", 200)
-        success2, _ = self.run_test("Get Resumen General", "GET", "resumen/general", 200)
+        success1, _ = self.run_test("Get Resumen por Proveedor", "GET", f"resumen/proveedor/{self.test_empresa_id}", 200)
+        success2, _ = self.run_test("Get Resumen General", "GET", f"resumen/general/{self.test_empresa_id}", 200)
         return success1 and success2
 
     def test_estado_cuenta_pagadas(self):
         """Test the new Estado de Cuenta Pagadas endpoint"""
-        success, response_data = self.run_test("Get Estado Cuenta Pagadas", "GET", "estado-cuenta/pagadas", 200)
+        success, response_data = self.run_test("Get Estado Cuenta Pagadas", "GET", f"estado-cuenta/pagadas/{self.test_empresa_id}", 200)
         
         if success and response_data:
             # Validate response structure
