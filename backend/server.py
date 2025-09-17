@@ -31,8 +31,26 @@ api_router = APIRouter(prefix="/api")
 
 
 # Define Models
+class Empresa(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    nombre: str
+    rut_cuit: Optional[str] = None
+    direccion: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    fecha_creacion: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    activa: bool = True
+
+class EmpresaCreate(BaseModel):
+    nombre: str
+    rut_cuit: Optional[str] = None
+    direccion: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+
 class Invoice(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    empresa_id: str  # Nueva relación con empresa
     numero_factura: str
     nombre_proveedor: str
     fecha_factura: str
