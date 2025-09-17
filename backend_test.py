@@ -12,6 +12,7 @@ class InvoiceAPITester:
         self.tests_run = 0
         self.tests_passed = 0
         self.created_invoice_id = None
+        self.test_empresa_id = "f94fee4d-dc88-41b8-b4eb-d611d3c4bbb1"  # Demo company ID
 
     def run_test(self, name, method, endpoint, expected_status, data=None, files=None):
         """Run a single API test"""
