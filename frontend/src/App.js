@@ -871,23 +871,45 @@ function App() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {invoice.estado_pago === "pendiente" ? (
-                            <Button
-                              size="sm"
-                              onClick={() => updateInvoiceStatus(invoice.id, "pagado")}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              Marcar Pagado
-                            </Button>
-                          ) : (
+                          <div className="flex gap-2">
+                            {invoice.estado_pago === "pendiente" ? (
+                              <Button
+                                size="sm"
+                                onClick={() => updateInvoiceStatus(invoice.id, "pagado")}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                Marcar Pagado
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => updateInvoiceStatus(invoice.id, "pendiente")}
+                              >
+                                Marcar Pendiente
+                              </Button>
+                            )}
+                            
+                            {invoice.archivo_pdf && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => downloadInvoicePDF(invoice.id, invoice.numero_factura)}
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            )}
+                            
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => updateInvoiceStatus(invoice.id, "pendiente")}
+                              onClick={() => confirmDeleteInvoice(invoice)}
+                              className="text-red-600 hover:text-red-700"
                             >
-                              Marcar Pendiente
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                          )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
