@@ -108,6 +108,69 @@ async def root():
     return {"message": "API de Cuentas por Pagar"}
 
 
+# ENDPOINTS DE EMPRESAS
+@api_router.get("/empresas", response_model=List[Empresa])
+async def get_empresas():
+    """Obtiene todas las empresas"""
+    try:
+        empresas = await db.empresas.find({"activa": True}).to_list(1000)
+        return [Empresa(**parse_from_mongo(empresa)) for empresa in empresas]
+    except Exception as e:
+        logging.error(f"Error obteniendo empresas: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/empresas", response_model=Empresa)
+async def create_empresa(empresa: EmpresaCreate):
+    """Crea una nueva empresa"""
+    try:
+        empresa_data = empresa.dict()
+        empresa_obj = Empresa(**empresa_data)
+        empresa_dict = prepare_for_mongo(empresa_obj.dict())
+        
+        await db.empresas.insert_one(empresa_dict)
+        return empresa_obj
+    except Exception as e:
+        logging.error(f"Error creando empresa: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/empresas/{empresa_id}", response_model=Empresa)
+async def get_empresa(empresa_id: str):
+    """Obtiene una empresa específica"""
+    try:
+        empresa = await db.empresas.find_one({"id": empresa_id, "activa": True})
+        if not empresa:
+            raise HTTPException(status_code=404, detail="Empresa no encontrada")
+        return Empresa(**parse_from_mongo(empresa))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error obteniendo empresa: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.put("/empresas/{empresa_id}", response_model=Empresa)
+async def update_empresa(empresa_id: str, empresa_update: EmpresaCreate):
+    """Actualiza una empresa"""
+    try:
+        result = await db.empresas.update_one(
+            {"id": empresa_id, "activa": True},
+            {"$set": empresa_update.dict(exclude_unset=True)}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Empresa no encontrada")
+        
+        empresa = await db.empresas.find_one({"id": empresa_id})
+        return Empresa(**parse_from_mongo(empresa))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error actualizando empresa: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
     """Procesa un PDF y extrae datos de la factura usando Gemini 2.5 Pro"""
