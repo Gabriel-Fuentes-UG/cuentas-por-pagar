@@ -340,6 +340,152 @@ function App() {
             )}
           </TabsContent>
 
+          {/* Tab: Facturas Pagadas */}
+          <TabsContent value="pagadas">
+            <div className="space-y-6">
+              {/* Resumen de Facturas Pagadas */}
+              {estadoCuentaPagadas && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Pagado</CardTitle>
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-600">
+                        {formatCurrency(estadoCuentaPagadas.total_pagado)}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Facturas Pagadas</CardTitle>
+                      <FileText className="h-4 w-4 text-blue-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {estadoCuentaPagadas.cantidad_facturas_pagadas}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Proveedores</CardTitle>
+                      <Users className="h-4 w-4 text-purple-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-purple-600">
+                        {estadoCuentaPagadas.facturas_por_proveedor.length}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Resumen por Proveedor - Facturas Pagadas */}
+              {estadoCuentaPagadas && estadoCuentaPagadas.facturas_por_proveedor.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Pagos por Proveedor
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Proveedor</TableHead>
+                          <TableHead>Total Pagado</TableHead>
+                          <TableHead>Facturas Pagadas</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {estadoCuentaPagadas.facturas_por_proveedor.map((proveedor, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">
+                              {proveedor.proveedor}
+                            </TableCell>
+                            <TableCell className="font-semibold text-green-600">
+                              {formatCurrency(proveedor.total_deuda)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {proveedor.facturas_pagadas}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Lista Detallada de Facturas Pagadas */}
+              {estadoCuentaPagadas && estadoCuentaPagadas.facturas_pagadas.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5" />
+                      Detalle de Facturas Pagadas
+                    </CardTitle>
+                    <CardDescription>
+                      Historial completo de todas las facturas marcadas como pagadas
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nº Factura</TableHead>
+                          <TableHead>Proveedor</TableHead>
+                          <TableHead>Fecha Factura</TableHead>
+                          <TableHead>Monto Pagado</TableHead>
+                          <TableHead>Archivo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {estadoCuentaPagadas.facturas_pagadas.map((factura) => (
+                          <TableRow key={factura.id}>
+                            <TableCell className="font-medium">
+                              {factura.numero_factura}
+                            </TableCell>
+                            <TableCell>{factura.nombre_proveedor}</TableCell>
+                            <TableCell>{formatDate(factura.fecha_factura)}</TableCell>
+                            <TableCell className="font-semibold text-green-600">
+                              {formatCurrency(factura.monto)}
+                            </TableCell>
+                            <TableCell className="text-sm text-slate-600">
+                              {factura.archivo_pdf || "N/A"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Mensaje cuando no hay facturas pagadas */}
+              {estadoCuentaPagadas && estadoCuentaPagadas.facturas_pagadas.length === 0 && (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <CheckCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-slate-600 mb-2">
+                      No hay facturas pagadas
+                    </h3>
+                    <p className="text-slate-500">
+                      Las facturas marcadas como pagadas aparecerán aquí
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
           {/* Tab: Facturas */}
           <TabsContent value="facturas">
             <Card>
