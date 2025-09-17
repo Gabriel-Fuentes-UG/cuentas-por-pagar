@@ -154,6 +154,7 @@ function App() {
 
       fetchInvoices();
       fetchResumenGeneral();
+      fetchEstadoCuentaPagadas();
     } catch (error) {
       console.error("Error updating status:", error);
       toast({
