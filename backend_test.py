@@ -217,6 +217,9 @@ def main():
     tester.test_get_invoices_with_filters()
     tester.test_resumen_endpoints()
     
+    print("\n💰 Testing Estado Cuenta Pagadas (NEW FUNCTIONALITY)...")
+    tester.test_estado_cuenta_pagadas()
+    
     print("\n📄 Testing PDF Upload...")
     tester.test_upload_pdf()
     
