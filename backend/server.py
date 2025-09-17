@@ -366,6 +366,56 @@ async def get_resumen_general():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.get("/estado-cuenta/pagadas", response_model=EstadoCuentaPagadas)
+async def get_estado_cuenta_pagadas():
+    """Obtiene el estado de cuenta de todas las facturas pagadas"""
+    try:
+        # Obtener todas las facturas pagadas
+        facturas_pagadas = await db.invoices.find({"estado_pago": "pagado"}).to_list(1000)
+        facturas_pagadas_obj = [Invoice(**parse_from_mongo(factura)) for factura in facturas_pagadas]
+        
+        # Calcular total pagado
+        total_pagado = sum(factura.monto for factura in facturas_pagadas_obj)
+        
+        # Obtener resumen por proveedor solo para facturas pagadas
+        pipeline_pagadas = [
+            {"$match": {"estado_pago": "pagado"}},
+            {
+                "$group": {
+                    "_id": "$nombre_proveedor",
+                    "total_pagado": {"$sum": "$monto"},
+                    "facturas_pagadas": {"$sum": 1}
+                }
+            },
+            {
+                "$project": {
+                    "proveedor": "$_id",
+                    "total_deuda": "$total_pagado",  # Usando el mismo campo para consistencia
+                    "facturas_pendientes": {"$literal": 0},
+                    "facturas_pagadas": 1,
+                    "_id": 0
+                }
+            },
+            {
+                "$sort": {"total_deuda": -1}
+            }
+        ]
+        
+        proveedores_pagadas = await db.invoices.aggregate(pipeline_pagadas).to_list(1000)
+        proveedores_obj = [ResumenProveedor(**item) for item in proveedores_pagadas]
+        
+        return EstadoCuentaPagadas(
+            total_pagado=total_pagado,
+            cantidad_facturas_pagadas=len(facturas_pagadas_obj),
+            facturas_por_proveedor=proveedores_obj,
+            facturas_pagadas=facturas_pagadas_obj
+        )
+        
+    except Exception as e:
+        logging.error(f"Error obteniendo estado de cuenta pagadas: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
