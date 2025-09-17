@@ -13,6 +13,9 @@ from datetime import datetime, timezone
 from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
 import tempfile
 import json
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+import io
 
 
 ROOT_DIR = Path(__file__).parent
