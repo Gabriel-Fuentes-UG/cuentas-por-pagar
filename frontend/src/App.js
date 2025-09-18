@@ -84,6 +84,46 @@ function App() {
     }
   }, [isMounted]);
 
+  // Función segura para crear y gestionar elementos de descarga
+  const createDownloadElement = useCallback((url, filename) => {
+    if (!isMounted) return null;
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    link.setAttribute('data-react-download', 'true'); // Marcador para identificar elementos
+    
+    return link;
+  }, [isMounted]);
+
+  // Función segura para limpiar elementos de descarga
+  const cleanupDownloadElement = useCallback((link, url) => {
+    if (!link) return;
+    
+    const cleanup = () => {
+      try {
+        if (link && link.parentNode && document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+        if (url) {
+          window.URL.revokeObjectURL(url);
+        }
+      } catch (error) {
+        console.warn('Cleanup warning:', error);
+      }
+    };
+    
+    // Cleanup inmediato si el componente no está montado
+    if (!isMounted) {
+      cleanup();
+      return;
+    }
+    
+    // Cleanup con delay para React
+    setTimeout(cleanup, 100);
+  }, [isMounted]);
+
   // Cargar empresas al iniciar
   useEffect(() => {
     fetchEmpresas();
