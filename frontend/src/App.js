@@ -547,6 +547,11 @@ function App() {
   };
 
   const confirmDeleteEmpresa = (empresa) => {
+    // Cerrar otros diálogos antes de abrir este
+    setShowDeleteDialog(false);
+    setShowContractDialog(false);
+    setShowEditEmpresaDialog(false);
+    
     setEmpresaToDelete(empresa);
     setShowDeleteEmpresaDialog(true);
   };
