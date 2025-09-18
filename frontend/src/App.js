@@ -186,43 +186,45 @@ function App() {
   };
 
   // ===== FUNCIONES DE FACTURAS (cuando hay empresa seleccionada) =====
-  const fetchInvoices = async () => {
-    if (!selectedEmpresa) return;
+  const fetchInvoices = useCallback(async () => {
+    if (!selectedEmpresa || !isMounted) return;
     
     try {
       const response = await axios.get(`${API}/invoices/${selectedEmpresa.id}`);
-      setInvoices(response.data);
+      safeSetState(setInvoices, response.data);
     } catch (error) {
       console.error("Error fetching invoices:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las facturas",
-        variant: "destructive",
-      });
+      if (isMounted) {
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las facturas",
+          variant: "destructive",
+        });
+      }
     }
-  };
+  }, [selectedEmpresa, safeSetState, isMounted, toast]);
 
-  const fetchResumenGeneral = async () => {
-    if (!selectedEmpresa) return;
+  const fetchResumenGeneral = useCallback(async () => {
+    if (!selectedEmpresa || !isMounted) return;
     
     try {
       const response = await axios.get(`${API}/resumen/general/${selectedEmpresa.id}`);
-      setResumenGeneral(response.data);
+      safeSetState(setResumenGeneral, response.data);
     } catch (error) {
       console.error("Error fetching resumen:", error);
     }
-  };
+  }, [selectedEmpresa, safeSetState, isMounted]);
 
-  const fetchEstadoCuentaPagadas = async () => {
-    if (!selectedEmpresa) return;
+  const fetchEstadoCuentaPagadas = useCallback(async () => {
+    if (!selectedEmpresa || !isMounted) return;
     
     try {
       const response = await axios.get(`${API}/estado-cuenta/pagadas/${selectedEmpresa.id}`);
-      setEstadoCuentaPagadas(response.data);
+      safeSetState(setEstadoCuentaPagadas, response.data);
     } catch (error) {
       console.error("Error fetching estado cuenta pagadas:", error);
     }
-  };
+  }, [selectedEmpresa, safeSetState, isMounted]);
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
