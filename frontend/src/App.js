@@ -116,19 +116,21 @@ function App() {
   }, [invoices, filterEstado, filterProveedor]);
 
   // ===== FUNCIONES DE EMPRESA =====
-  const fetchEmpresas = async () => {
+  const fetchEmpresas = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/empresas`);
-      setEmpresas(response.data);
+      safeSetState(setEmpresas, response.data);
     } catch (error) {
       console.error("Error fetching empresas:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las empresas",
-        variant: "destructive",
-      });
+      if (isMounted) {
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las empresas",
+          variant: "destructive",
+        });
+      }
     }
-  };
+  }, [safeSetState, isMounted, toast]);
 
   const createEmpresa = async () => {
     if (!newEmpresa.nombre.trim()) {
