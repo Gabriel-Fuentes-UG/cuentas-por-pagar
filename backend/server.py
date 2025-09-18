@@ -290,6 +290,7 @@ async def upload_pdf(empresa_id: str, file: UploadFile = File(...)):
                     "id": invoice_data['id'],
                     "empresa_id": invoice_data['empresa_id'],
                     "numero_factura": invoice_data['numero_factura'],
+                    "numero_contrato": invoice_data['numero_contrato'],  # NUEVO CAMPO
                     "nombre_proveedor": invoice_data['nombre_proveedor'],
                     "fecha_factura": invoice_data['fecha_factura'],
                     "monto": invoice_data['monto'],
