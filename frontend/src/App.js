@@ -1166,6 +1166,14 @@ function App() {
                         </TableCell>
                         <TableCell>
                           {invoice.numero_contrato || "N/A"}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openContractDialog(invoice)}
+                            className="ml-2 h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                          >
+                            <Edit3 className="h-3 w-3" />
+                          </Button>
                         </TableCell>
                         <TableCell>{invoice.nombre_proveedor}</TableCell>
                         <TableCell>{formatDate(invoice.fecha_factura)}</TableCell>
