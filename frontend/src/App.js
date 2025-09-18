@@ -43,6 +43,10 @@ function App() {
   const [filterEstado, setFilterEstado] = useState("todos");
   const [filterProveedor, setFilterProveedor] = useState("");
   
+  // Estados para confirmación de eliminación
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
+  
   // Estados para edición de número de contrato
   const [showContractDialog, setShowContractDialog] = useState(false);
   const [invoiceToEditContract, setInvoiceToEditContract] = useState(null);
