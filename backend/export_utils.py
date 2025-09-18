@@ -84,14 +84,14 @@ def create_invoices_excel(invoices, estado_filter, empresa_nombre):
     # Agregar totales si hay facturas
     if invoices:
         total_row = len(invoices) + 7
-        ws.merge_cells(f'A{total_row}:C{total_row}')
+        ws.merge_cells(f'A{total_row}:D{total_row}')
         ws[f'A{total_row}'] = f"TOTAL ({len(invoices)} facturas):"
         ws[f'A{total_row}'].font = Font(bold=True)
         ws[f'A{total_row}'].alignment = Alignment(horizontal="right")
         
         total_monto = sum(invoice.get('monto', 0) for invoice in invoices)
-        ws[f'D{total_row}'] = f"${total_monto:,.2f}"
-        ws[f'D{total_row}'].font = Font(bold=True)
+        ws[f'E{total_row}'] = f"${total_monto:,.2f}"
+        ws[f'E{total_row}'].font = Font(bold=True)
     
     # Guardar en memoria
     excel_buffer = io.BytesIO()
