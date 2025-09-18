@@ -1072,7 +1072,7 @@ function App() {
                       </TableHeader>
                       <TableBody>
                         {estadoCuentaPagadas.facturas_por_proveedor.map((proveedor, index) => (
-                          <TableRow key={index}>
+                          <TableRow key={`pagadas-proveedor-${proveedor.proveedor}-${index}`}>
                             <TableCell className="font-medium">
                               {proveedor.proveedor}
                             </TableCell>
