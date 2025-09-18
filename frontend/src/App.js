@@ -74,6 +74,18 @@ function App() {
   useEffect(() => {
     return () => {
       setIsMounted(false);
+      
+      // Cleanup global de elementos de descarga huérfanos
+      const downloadElements = document.querySelectorAll('[data-react-download="true"]');
+      downloadElements.forEach(element => {
+        try {
+          if (element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+        } catch (error) {
+          console.warn('Global cleanup warning:', error);
+        }
+      });
     };
   }, []);
 
