@@ -40,6 +40,7 @@ def create_invoices_excel(invoices, estado_filter, empresa_nombre):
     # Encabezados (fila 5)
     headers = [
         "Número de Factura",
+        "Número de Contrato",
         "Proveedor", 
         "Fecha de Factura",
         "Monto",
