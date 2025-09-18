@@ -358,44 +358,41 @@ function App() {
     }
   };
 
-  const downloadInvoicePDF = async (invoiceId, numeroFactura) => {
+  const downloadInvoicePDF = useCallback(async (invoiceId, numeroFactura) => {
+    if (!isMounted) return;
+    
     try {
       const response = await axios.get(`${API}/invoices/${invoiceId}/download`, {
         responseType: 'blob'
       });
 
-      // Crear URL del blob y descargar de forma más segura
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `factura_${numeroFactura}.pdf`);
-      link.style.display = 'none'; // Ocultar el elemento
+      const link = createDownloadElement(url, `factura_${numeroFactura}.pdf`);
       
-      // Agregar al DOM, hacer click y limpiar de forma segura
+      if (!link) return;
+      
       document.body.appendChild(link);
       link.click();
       
-      // Limpiar de forma asíncrona para evitar conflictos con React
-      setTimeout(() => {
-        if (link.parentNode) {
-          document.body.removeChild(link);
-        }
-        window.URL.revokeObjectURL(url);
-      }, 100);
+      cleanupDownloadElement(link, url);
 
-      toast({
-        title: "¡Descarga iniciada!",
-        description: `PDF de la factura ${numeroFactura} descargado`,
-      });
+      if (isMounted) {
+        toast({
+          title: "¡Descarga iniciada!",
+          description: `PDF de la factura ${numeroFactura} descargado`,
+        });
+      }
     } catch (error) {
       console.error("Error downloading PDF:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo descargar el PDF de la factura",
-        variant: "destructive",
-      });
+      if (isMounted) {
+        toast({
+          title: "Error",
+          description: "No se pudo descargar el PDF de la factura",
+          variant: "destructive",
+        });
+      }
     }
-  };
+  }, [isMounted, createDownloadElement, cleanupDownloadElement, toast]);
 
   const confirmDeleteInvoice = (invoice) => {
     // Cerrar otros diálogos antes de abrir este
