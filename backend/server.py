@@ -227,6 +227,7 @@ async def upload_pdf(empresa_id: str, file: UploadFile = File(...)):
             
             {
                 "numero_factura": "número de factura encontrado",
+                "numero_contrato": "número de contrato, orden de compra, o referencia contractual encontrado (si existe)",
                 "nombre_proveedor": "nombre del proveedor/empresa que emite la factura",
                 "fecha_factura": "fecha de la factura en formato YYYY-MM-DD",
                 "monto": "monto total a pagar como número decimal"
@@ -235,6 +236,7 @@ async def upload_pdf(empresa_id: str, file: UploadFile = File(...)):
             IMPORTANTE:
             - Devuelve SOLO el JSON sin texto adicional
             - Si no encuentras algún dato, usa null
+            - Para numero_contrato busca: "Contrato", "Contract", "Orden", "Order", "OC", "PO", "Referencia", "Ref"
             - El monto debe ser un número sin símbolos de moneda
             - La fecha debe estar en formato YYYY-MM-DD
             """
