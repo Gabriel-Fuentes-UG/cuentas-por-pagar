@@ -1160,6 +1160,9 @@ function App() {
                         <TableCell className="font-medium">
                           {invoice.numero_factura}
                         </TableCell>
+                        <TableCell>
+                          {invoice.numero_contrato || "N/A"}
+                        </TableCell>
                         <TableCell>{invoice.nombre_proveedor}</TableCell>
                         <TableCell>{formatDate(invoice.fecha_factura)}</TableCell>
                         <TableCell className="font-semibold">
