@@ -491,6 +491,11 @@ function App() {
 
   // ===== FUNCIONES DE GESTIÓN DE EMPRESAS =====
   const openEditEmpresa = (empresa) => {
+    // Cerrar otros diálogos antes de abrir este
+    setShowDeleteDialog(false);
+    setShowContractDialog(false);
+    setShowDeleteEmpresaDialog(false);
+    
     setEmpresaToEdit(empresa);
     setEditEmpresaData({
       nombre: empresa.nombre || "",
