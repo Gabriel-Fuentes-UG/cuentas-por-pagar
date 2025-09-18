@@ -753,7 +753,7 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {empresas.map((empresa) => (
               <Card 
-                key={empresa.id} 
+                key={`empresa-${empresa.id}`}
                 className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-blue-300"
                 onClick={() => selectEmpresa(empresa)}
               >
