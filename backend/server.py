@@ -56,6 +56,7 @@ class Invoice(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     empresa_id: str  # Nueva relación con empresa
     numero_factura: str
+    numero_contrato: Optional[str] = None  # NUEVO CAMPO
     nombre_proveedor: str
     fecha_factura: str
     monto: float
