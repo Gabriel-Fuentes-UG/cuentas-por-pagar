@@ -539,6 +539,42 @@ function App() {
     }
   };
 
+  // ===== FUNCIONES DE NÚMERO DE CONTRATO =====
+  const openContractDialog = (invoice) => {
+    setInvoiceToEditContract(invoice);
+    setContractNumber(invoice.numero_contrato || "");
+    setShowContractDialog(true);
+  };
+
+  const updateContractNumber = async () => {
+    if (!invoiceToEditContract) return;
+
+    try {
+      await axios.put(`${API}/invoices/${invoiceToEditContract.id}/contrato`, {
+        numero_contrato: contractNumber || null
+      });
+
+      toast({
+        title: "¡Actualizado!",
+        description: "Número de contrato actualizado correctamente",
+      });
+
+      setShowContractDialog(false);
+      setInvoiceToEditContract(null);
+      setContractNumber("");
+      fetchInvoices();
+      fetchResumenGeneral();
+      fetchEstadoCuentaPagadas();
+    } catch (error) {
+      console.error("Error updating contract number:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el número de contrato",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("es-AR", {
       style: "currency",
