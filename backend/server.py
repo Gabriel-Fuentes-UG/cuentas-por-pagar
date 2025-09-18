@@ -270,7 +270,7 @@ async def upload_pdf(empresa_id: str, file: UploadFile = File(...)):
                     'id': str(uuid.uuid4()),
                     'empresa_id': empresa_id,  # Asociar con la empresa
                     'numero_factura': str(extracted_data['numero_factura']),
-                    'numero_contrato': str(extracted_data['numero_contrato']) if extracted_data.get('numero_contrato') else None,  # NUEVO CAMPO
+                    'numero_contrato': None,  # Se agregará manualmente
                     'nombre_proveedor': str(extracted_data['nombre_proveedor']),
                     'fecha_factura': str(extracted_data['fecha_factura']),
                     'monto': float(extracted_data['monto']),
