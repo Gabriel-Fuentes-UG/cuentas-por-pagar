@@ -982,7 +982,7 @@ function App() {
                     </TableHeader>
                     <TableBody>
                       {resumenGeneral.proveedores.map((proveedor, index) => (
-                        <TableRow key={index}>
+                        <TableRow key={`dashboard-proveedor-${proveedor.proveedor}-${index}`}>
                           <TableCell className="font-medium">
                             {proveedor.proveedor}
                           </TableCell>
