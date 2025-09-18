@@ -303,15 +303,24 @@ function App() {
         responseType: 'blob'
       });
 
-      // Crear URL del blob y descargar
+      // Crear URL del blob y descargar de forma más segura
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `factura_${numeroFactura}.pdf`);
+      link.style.display = 'none'; // Ocultar el elemento
+      
+      // Agregar al DOM, hacer click y limpiar de forma segura
       document.body.appendChild(link);
       link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      
+      // Limpiar de forma asíncrona para evitar conflictos con React
+      setTimeout(() => {
+        if (link.parentNode) {
+          document.body.removeChild(link);
+        }
+        window.URL.revokeObjectURL(url);
+      }, 100);
 
       toast({
         title: "¡Descarga iniciada!",
