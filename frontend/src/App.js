@@ -235,51 +235,43 @@ function App() {
   };
 
   // ===== FUNCIONES DE FACTURAS (cuando hay empresa seleccionada) =====
-  const fetchInvoices = useCallback(async () => {
-    if (!selectedEmpresa || !isMountedRef.current) return;
+  const fetchInvoices = async () => {
+    if (!selectedEmpresa) return;
     
     try {
       const response = await axios.get(`${API}/invoices/${selectedEmpresa.id}`);
-      if (isMountedRef.current) {
-        setInvoices(response.data);
-      }
+      setInvoices(response.data);
     } catch (error) {
       console.error("Error fetching invoices:", error);
-      if (isMountedRef.current) {
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar las facturas",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar las facturas",
+        variant: "destructive",
+      });
     }
-  }, [selectedEmpresa, toast]);
+  };
 
-  const fetchResumenGeneral = useCallback(async () => {
-    if (!selectedEmpresa || !isMountedRef.current) return;
+  const fetchResumenGeneral = async () => {
+    if (!selectedEmpresa) return;
     
     try {
       const response = await axios.get(`${API}/resumen/general/${selectedEmpresa.id}`);
-      if (isMountedRef.current) {
-        setResumenGeneral(response.data);
-      }
+      setResumenGeneral(response.data);
     } catch (error) {
       console.error("Error fetching resumen:", error);
     }
-  }, [selectedEmpresa]);
+  };
 
-  const fetchEstadoCuentaPagadas = useCallback(async () => {
-    if (!selectedEmpresa || !isMountedRef.current) return;
+  const fetchEstadoCuentaPagadas = async () => {
+    if (!selectedEmpresa) return;
     
     try {
       const response = await axios.get(`${API}/estado-cuenta/pagadas/${selectedEmpresa.id}`);
-      if (isMountedRef.current) {
-        setEstadoCuentaPagadas(response.data);
-      }
+      setEstadoCuentaPagadas(response.data);
     } catch (error) {
       console.error("Error fetching estado cuenta pagadas:", error);
     }
-  }, [selectedEmpresa]);
+  };
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
