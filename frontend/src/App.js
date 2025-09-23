@@ -166,12 +166,12 @@ function App() {
   const fetchEmpresas = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/empresas`);
-      if (isMountedRef.current) {
+      if (mountedRef.current) {
         setEmpresas(response.data);
       }
     } catch (error) {
       console.error("Error fetching empresas:", error);
-      if (isMountedRef.current) {
+      if (mountedRef.current) {
         toast({
           title: "Error",
           description: "No se pudieron cargar las empresas",
