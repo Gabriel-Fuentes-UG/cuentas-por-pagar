@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "./App.css";
 import axios from "axios";
 import { Button } from "./components/ui/button";
@@ -17,318 +17,55 @@ import { Toaster } from "./components/ui/sonner";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Simple download function without DOM manipulation
-const triggerDownload = (blob, filename) => {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.style.display = 'none';
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+// Safe download hook that avoids DOM manipulation issues
+const useDownload = () => {
+  const downloadFile = useCallback((blob, filename) => {
+    try {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup safely with timeout to avoid race conditions
+      setTimeout(() => {
+        try {
+          if (document.body.contains(link)) {
+            document.body.removeChild(link);
+          }
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          console.warn('Cleanup already performed:', error);
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Download error:', error);
+    }
+  }, []);
+
+  return downloadFile;
 };
 
-function App() {
-  // Main states
-  const [view, setView] = useState("empresas");
-  const [empresa, setEmpresa] = useState(null);
-  const [empresas, setEmpresas] = useState([]);
-  
-  // Invoice states  
-  const [invoices, setInvoices] = useState([]);
-  const [filteredInvoices, setFilteredInvoices] = useState([]);
-  const [resumen, setResumen] = useState(null);
-  const [estadoPagadas, setEstadoPagadas] = useState(null);
-  
-  // Form states
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [filterEstado, setFilterEstado] = useState("todos");
-  const [filterProveedor, setFilterProveedor] = useState("");
-  
-  // Dialog states
+// Company management component
+const CompanyManager = ({ 
+  empresas, 
+  onSelectEmpresa, 
+  onCreateEmpresa, 
+  onEditEmpresa, 
+  onDeleteEmpresa 
+}) => {
   const [showNewEmpresa, setShowNewEmpresa] = useState(false);
   const [showEditEmpresa, setShowEditEmpresa] = useState(false);
   const [showDeleteEmpresa, setShowDeleteEmpresa] = useState(false);
-  const [showDeleteInvoice, setShowDeleteInvoice] = useState(false);
-  const [showContractEdit, setShowContractEdit] = useState(false);
-  
-  // Edit states
   const [empresaForm, setEmpresaForm] = useState({
     nombre: "", rut_cuit: "", direccion: "", telefono: "", email: ""
   });
-  const [contractForm, setContractForm] = useState("");
   const [editingEmpresa, setEditingEmpresa] = useState(null);
-  const [editingInvoice, setEditingInvoice] = useState(null);
-  const [deletingItem, setDeletingItem] = useState(null);
+  const [deletingEmpresa, setDeletingEmpresa] = useState(null);
 
-  const { toast } = useToast();
-
-  // Load empresas on mount
-  useEffect(() => {
-    loadEmpresas();
-  }, []);
-
-  // Load empresa data when selected
-  useEffect(() => {
-    if (empresa && view === "empresa-detail") {
-      loadInvoices();
-      loadResumen();
-      loadEstadoPagadas();
-    }
-  }, [empresa, view]);
-
-  // Filter invoices
-  useEffect(() => {
-    let filtered = [...invoices];
-    if (filterEstado !== "todos") {
-      filtered = filtered.filter(inv => inv.estado_pago === filterEstado);
-    }
-    if (filterProveedor) {
-      filtered = filtered.filter(inv => 
-        inv.nombre_proveedor.toLowerCase().includes(filterProveedor.toLowerCase())
-      );
-    }
-    setFilteredInvoices(filtered);
-  }, [invoices, filterEstado, filterProveedor]);
-
-  // API Functions
-  const loadEmpresas = async () => {
-    try {
-      const res = await axios.get(`${API}/empresas`);
-      setEmpresas(res.data);
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudieron cargar las empresas", variant: "destructive" });
-    }
-  };
-
-  const loadInvoices = async () => {
-    if (!empresa) return;
-    try {
-      const res = await axios.get(`${API}/invoices/${empresa.id}`);
-      setInvoices(res.data);
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudieron cargar las facturas", variant: "destructive" });
-    }
-  };
-
-  const loadResumen = async () => {
-    if (!empresa) return;
-    try {
-      const res = await axios.get(`${API}/resumen/general/${empresa.id}`);
-      setResumen(res.data);
-    } catch (error) {
-      console.error("Error loading resumen:", error);
-    }
-  };
-
-  const loadEstadoPagadas = async () => {
-    if (!empresa) return;
-    try {
-      const res = await axios.get(`${API}/estado-cuenta/pagadas/${empresa.id}`);
-      setEstadoPagadas(res.data);
-    } catch (error) {
-      console.error("Error loading estado pagadas:", error);
-    }
-  };
-
-  // Actions
-  const selectEmpresa = (emp) => {
-    setEmpresa(emp);
-    setView("empresa-detail");
-    setInvoices([]);
-    setResumen(null);
-    setEstadoPagadas(null);
-  };
-
-  const backToEmpresas = () => {
-    setView("empresas");
-    setEmpresa(null);
-  };
-
-  const createEmpresa = async () => {
-    if (!empresaForm.nombre.trim()) {
-      toast({ title: "Error", description: "El nombre es requerido", variant: "destructive" });
-      return;
-    }
-    try {
-      await axios.post(`${API}/empresas`, empresaForm);
-      toast({ title: "Éxito", description: "Empresa creada correctamente" });
-      setEmpresaForm({ nombre: "", rut_cuit: "", direccion: "", telefono: "", email: "" });
-      setShowNewEmpresa(false);
-      loadEmpresas();
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo crear la empresa", variant: "destructive" });
-    }
-  };
-
-  const updateEmpresa = async () => {
-    if (!editingEmpresa || !empresaForm.nombre.trim()) return;
-    try {
-      await axios.put(`${API}/empresas/${editingEmpresa.id}`, empresaForm);
-      toast({ title: "Éxito", description: "Empresa actualizada" });
-      setShowEditEmpresa(false);
-      loadEmpresas();
-      if (empresa && empresa.id === editingEmpresa.id) {
-        setEmpresa({...editingEmpresa, ...empresaForm});
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
-    }
-  };
-
-  const deleteEmpresa = async () => {
-    if (!deletingItem) return;
-    try {
-      const res = await axios.delete(`${API}/empresas/${deletingItem.id}`);
-      toast({ 
-        title: "Empresa eliminada", 
-        description: `${deletingItem.nombre} eliminada. ${res.data.facturas_eliminadas} facturas eliminadas.` 
-      });
-      setShowDeleteEmpresa(false);
-      setDeletingItem(null);
-      loadEmpresas();
-      if (empresa && empresa.id === deletingItem.id) {
-        backToEmpresas();
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });
-    }
-  };
-
-  const uploadPDF = async () => {
-    if (!selectedFile || !empresa) return;
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    
-    try {
-      await axios.post(`${API}/upload-pdf/${empresa.id}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
-      toast({ title: "Éxito", description: "PDF procesado correctamente" });
-      setSelectedFile(null);
-      document.getElementById("pdf-upload").value = "";
-      loadInvoices();
-      loadResumen();
-      loadEstadoPagadas();
-    } catch (error) {
-      toast({ 
-        title: "Error", 
-        description: error.response?.data?.detail || "Error procesando PDF",
-        variant: "destructive" 
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const updateInvoiceStatus = async (invoiceId, newStatus) => {
-    try {
-      await axios.put(`${API}/invoices/${invoiceId}/estado`, { estado_pago: newStatus });
-      toast({ title: "Actualizado", description: `Factura marcada como ${newStatus}` });
-      loadInvoices();
-      loadResumen();
-      loadEstadoPagadas();
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
-    }
-  };
-
-  const updateContract = async () => {
-    if (!editingInvoice) return;
-    try {
-      await axios.put(`${API}/invoices/${editingInvoice.id}/contrato`, {
-        numero_contrato: contractForm || null
-      });
-      toast({ title: "Actualizado", description: "Número de contrato actualizado" });
-      setShowContractEdit(false);
-      setEditingInvoice(null);
-      setContractForm("");
-      loadInvoices();
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
-    }
-  };
-
-  const deleteInvoice = async () => {
-    if (!deletingItem) return;
-    try {
-      await axios.delete(`${API}/invoices/${deletingItem.id}`);
-      toast({ title: "Eliminada", description: `Factura ${deletingItem.numero_factura} eliminada` });
-      setShowDeleteInvoice(false);
-      setDeletingItem(null);
-      loadInvoices();
-      loadResumen();
-      loadEstadoPagadas();
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });
-    }
-  };
-
-  // Download functions
-  const downloadPDF = async (invoiceId, numeroFactura) => {
-    try {
-      const res = await axios.get(`${API}/invoices/${invoiceId}/download`, { responseType: 'blob' });
-      triggerDownload(res.data, `factura_${numeroFactura}.pdf`);
-      toast({ title: "Descarga iniciada", description: `PDF de factura ${numeroFactura}` });
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo descargar", variant: "destructive" });
-    }
-  };
-
-  const exportPendientes = async () => {
-    if (!empresa) return;
-    try {
-      const res = await axios.get(`${API}/export/facturas-pendientes/${empresa.id}`, { responseType: 'blob' });
-      triggerDownload(res.data, `facturas_pendientes_${empresa.nombre.replace(/\s+/g, '_')}.xlsx`);
-      toast({ title: "Exportado", description: "Excel de facturas pendientes descargado" });
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo exportar", variant: "destructive" });
-    }
-  };
-
-  const exportPagadas = async () => {
-    if (!empresa) return;
-    try {
-      const res = await axios.get(`${API}/export/facturas-pagadas/${empresa.id}`, { responseType: 'blob' });
-      triggerDownload(res.data, `facturas_pagadas_${empresa.nombre.replace(/\s+/g, '_')}.xlsx`);
-      toast({ title: "Exportado", description: "Excel de facturas pagadas descargado" });
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo exportar", variant: "destructive" });
-    }
-  };
-
-  const exportResumen = async () => {
-    if (!empresa) return;
-    try {
-      const res = await axios.get(`${API}/export/resumen-general/${empresa.id}`, { responseType: 'blob' });
-      triggerDownload(res.data, `resumen_general_${empresa.nombre.replace(/\s+/g, '_')}.xlsx`);
-      toast({ title: "Exportado", description: "Excel de resumen general descargado" });
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo exportar", variant: "destructive" });
-    }
-  };
-
-  // Helper functions
-  const formatCurrency = (amount) => new Intl.NumberFormat("es-AR", {
-    style: "currency", currency: "ARS"
-  }).format(amount);
-
-  const formatDate = (dateString) => new Date(dateString).toLocaleDateString("es-AR");
-
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0];
-    if (file && file.type === "application/pdf") {
-      setSelectedFile(file);
-    } else {
-      toast({ title: "Error", description: "Selecciona un archivo PDF válido", variant: "destructive" });
-    }
-  };
-
-  // Open dialog functions
   const openNewEmpresa = () => {
     setEmpresaForm({ nombre: "", rut_cuit: "", direccion: "", telefono: "", email: "" });
     setShowNewEmpresa(true);
@@ -347,8 +84,310 @@ function App() {
   };
 
   const openDeleteEmpresa = (emp) => {
-    setDeletingItem(emp);
+    setDeletingEmpresa(emp);
     setShowDeleteEmpresa(true);
+  };
+
+  const handleCreateEmpresa = () => {
+    onCreateEmpresa(empresaForm);
+    setShowNewEmpresa(false);
+    setEmpresaForm({ nombre: "", rut_cuit: "", direccion: "", telefono: "", email: "" });
+  };
+
+  const handleEditEmpresa = () => {
+    onEditEmpresa(editingEmpresa.id, empresaForm);
+    setShowEditEmpresa(false);
+    setEditingEmpresa(null);
+  };
+
+  const handleDeleteEmpresa = () => {
+    onDeleteEmpresa(deletingEmpresa.id);
+    setShowDeleteEmpresa(false);
+    setDeletingEmpresa(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-slate-800 mb-4">Panel de Gestión Empresarial</h1>
+          <p className="text-slate-600 text-xl">Gestiona las cuentas por pagar de todas tus empresas</p>
+        </div>
+
+        <div className="mb-8 text-center">
+          <Button size="lg" className="bg-blue-600 hover:bg-blue-700" onClick={openNewEmpresa}>
+            <Plus className="h-5 w-5 mr-2" />
+            Nueva Empresa
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {empresas.map((emp) => (
+            <Card key={`empresa-${emp.id}`} className="hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-300">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <Building className="h-8 w-8 text-blue-600" />
+                  <ArrowRight className="h-5 w-5 text-slate-400" />
+                </div>
+                <CardTitle className="text-xl">{emp.nombre}</CardTitle>
+                {emp.rut_cuit && <CardDescription>RUT/CUIT: {emp.rut_cuit}</CardDescription>}
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm text-slate-600">
+                  {emp.direccion && <p>📍 {emp.direccion}</p>}
+                  {emp.telefono && <p>📞 {emp.telefono}</p>}
+                  {emp.email && <p>📧 {emp.email}</p>}
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <Button className="flex-1" variant="outline" onClick={() => onSelectEmpresa(emp)}>
+                    Gestionar Cuentas
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openEditEmpresa(emp)} className="text-blue-600">
+                    <Edit3 className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openDeleteEmpresa(emp)} className="text-red-600">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {empresas.length === 0 && (
+          <div className="text-center py-12">
+            <Building className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-xl font-medium text-slate-600 mb-2">No hay empresas registradas</h3>
+            <p className="text-slate-500 mb-6">Crea tu primera empresa para comenzar</p>
+          </div>
+        )}
+      </div>
+
+      {/* Dialogs */}
+      <Dialog open={showNewEmpresa} onOpenChange={setShowNewEmpresa}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Crear Nueva Empresa</DialogTitle>
+            <DialogDescription>Ingresa los datos de la nueva empresa.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nombre de la Empresa *</Label>
+              <Input
+                value={empresaForm.nombre}
+                onChange={(e) => setEmpresaForm({...empresaForm, nombre: e.target.value})}
+                placeholder="Ej: Mi Empresa S.A."
+              />
+            </div>
+            <div>
+              <Label>RUT/CUIT</Label>
+              <Input
+                value={empresaForm.rut_cuit}
+                onChange={(e) => setEmpresaForm({...empresaForm, rut_cuit: e.target.value})}
+                placeholder="Ej: 20-12345678-9"
+              />
+            </div>
+            <div>
+              <Label>Dirección</Label>
+              <Input
+                value={empresaForm.direccion}
+                onChange={(e) => setEmpresaForm({...empresaForm, direccion: e.target.value})}
+                placeholder="Ej: Av. Principal 123"
+              />
+            </div>
+            <div>
+              <Label>Teléfono</Label>
+              <Input
+                value={empresaForm.telefono}
+                onChange={(e) => setEmpresaForm({...empresaForm, telefono: e.target.value})}
+                placeholder="Ej: +54 11 1234-5678"
+              />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={empresaForm.email}
+                onChange={(e) => setEmpresaForm({...empresaForm, email: e.target.value})}
+                placeholder="Ej: contacto@miempresa.com"
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button variant="outline" onClick={() => setShowNewEmpresa(false)} className="flex-1">
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateEmpresa} className="flex-1">
+                Crear Empresa
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditEmpresa} onOpenChange={setShowEditEmpresa}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Editar Empresa
+            </DialogTitle>
+            <DialogDescription>Modifica los datos de {editingEmpresa?.nombre}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nombre de la Empresa *</Label>
+              <Input
+                value={empresaForm.nombre}
+                onChange={(e) => setEmpresaForm({...empresaForm, nombre: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label>RUT/CUIT</Label>
+              <Input
+                value={empresaForm.rut_cuit}
+                onChange={(e) => setEmpresaForm({...empresaForm, rut_cuit: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label>Dirección</Label>
+              <Input
+                value={empresaForm.direccion}
+                onChange={(e) => setEmpresaForm({...empresaForm, direccion: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label>Teléfono</Label>
+              <Input
+                value={empresaForm.telefono}
+                onChange={(e) => setEmpresaForm({...empresaForm, telefono: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input
+                value={empresaForm.email}
+                onChange={(e) => setEmpresaForm({...empresaForm, email: e.target.value})}
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button variant="outline" onClick={() => setShowEditEmpresa(false)} className="flex-1">
+                Cancelar
+              </Button>
+              <Button onClick={handleEditEmpresa} className="flex-1">
+                Actualizar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteEmpresa} onOpenChange={setShowDeleteEmpresa}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Confirmar Eliminación
+            </DialogTitle>
+            <DialogDescription>
+              ¿Eliminar empresa <strong>{deletingEmpresa?.nombre}</strong>?
+              <br /><br />
+              <span className="text-red-600 font-semibold">⚠️ ADVERTENCIA:</span>
+              <br />
+              • Se eliminará la empresa y todos sus datos
+              <br />
+              • Se eliminarán todas las facturas asociadas
+              <br />
+              • Esta acción NO se puede deshacer
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-4">
+            <Button variant="outline" onClick={() => setShowDeleteEmpresa(false)} className="flex-1">
+              Cancelar
+            </Button>
+            <Button onClick={handleDeleteEmpresa} className="flex-1 bg-red-600 hover:bg-red-700">
+              Eliminar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// Invoice management component
+const InvoiceManager = ({ 
+  empresa, 
+  invoices, 
+  resumen, 
+  estadoPagadas,
+  onBackToEmpresas,
+  onUploadPDF,
+  onUpdateInvoiceStatus,
+  onUpdateContract,
+  onDeleteInvoice,
+  onDownloadPDF,
+  onExportPendientes,
+  onExportPagadas,
+  onExportResumen
+}) => {
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [filterEstado, setFilterEstado] = useState("todos");
+  const [filterProveedor, setFilterProveedor] = useState("");
+  const [filteredInvoices, setFilteredInvoices] = useState([]);
+  
+  // Contract editing
+  const [showContractEdit, setShowContractEdit] = useState(false);
+  const [contractForm, setContractForm] = useState("");
+  const [editingInvoice, setEditingInvoice] = useState(null);
+  
+  // Delete invoice
+  const [showDeleteInvoice, setShowDeleteInvoice] = useState(false);
+  const [deletingInvoice, setDeletingInvoice] = useState(null);
+
+  const { toast } = useToast();
+
+  // Filter invoices
+  useEffect(() => {
+    let filtered = [...invoices];
+    if (filterEstado !== "todos") {
+      filtered = filtered.filter(inv => inv.estado_pago === filterEstado);
+    }
+    if (filterProveedor) {
+      filtered = filtered.filter(inv => 
+        inv.nombre_proveedor.toLowerCase().includes(filterProveedor.toLowerCase())
+      );
+    }
+    setFilteredInvoices(filtered);
+  }, [invoices, filterEstado, filterProveedor]);
+
+  const formatCurrency = (amount) => new Intl.NumberFormat("es-AR", {
+    style: "currency", currency: "ARS"
+  }).format(amount);
+
+  const formatDate = (dateString) => new Date(dateString).toLocaleDateString("es-AR");
+
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type === "application/pdf") {
+      setSelectedFile(file);
+    } else {
+      toast({ title: "Error", description: "Selecciona un archivo PDF válido", variant: "destructive" });
+    }
+  };
+
+  const uploadPDF = async () => {
+    if (!selectedFile || !empresa) return;
+    setUploading(true);
+    
+    try {
+      await onUploadPDF(selectedFile);
+      setSelectedFile(null);
+      const fileInput = document.getElementById("pdf-upload");
+      if (fileInput) fileInput.value = "";
+    } finally {
+      setUploading(false);
+    }
   };
 
   const openContractEdit = (invoice) => {
@@ -358,241 +397,31 @@ function App() {
   };
 
   const openDeleteInvoice = (invoice) => {
-    setDeletingItem(invoice);
+    setDeletingInvoice(invoice);
     setShowDeleteInvoice(true);
   };
 
-  // Close all dialogs
-  const closeDialogs = () => {
-    setShowNewEmpresa(false);
-    setShowEditEmpresa(false);
-    setShowDeleteEmpresa(false);
-    setShowDeleteInvoice(false);
+  const handleUpdateContract = async () => {
+    if (!editingInvoice) return;
+    await onUpdateContract(editingInvoice.id, contractForm);
     setShowContractEdit(false);
-    setEditingEmpresa(null);
     setEditingInvoice(null);
-    setDeletingItem(null);
+    setContractForm("");
   };
 
-  // Render empresas list view
-  if (view === "empresas") {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-          <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold text-slate-800 mb-4">Panel de Gestión Empresarial</h1>
-            <p className="text-slate-600 text-xl">Gestiona las cuentas por pagar de todas tus empresas</p>
-          </div>
+  const handleDeleteInvoice = async () => {
+    if (!deletingInvoice) return;
+    await onDeleteInvoice(deletingInvoice.id);
+    setShowDeleteInvoice(false);
+    setDeletingInvoice(null);
+  };
 
-          <div className="mb-8 text-center">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700" onClick={openNewEmpresa}>
-              <Plus className="h-5 w-5 mr-2" />
-              Nueva Empresa
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {empresas.map((emp) => (
-              <Card key={`empresa-${emp.id}`} className="hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-300">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <Building className="h-8 w-8 text-blue-600" />
-                    <ArrowRight className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <CardTitle className="text-xl">{emp.nombre}</CardTitle>
-                  {emp.rut_cuit && <CardDescription>RUT/CUIT: {emp.rut_cuit}</CardDescription>}
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm text-slate-600">
-                    {emp.direccion && <p>📍 {emp.direccion}</p>}
-                    {emp.telefono && <p>📞 {emp.telefono}</p>}
-                    {emp.email && <p>📧 {emp.email}</p>}
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <Button className="flex-1" variant="outline" onClick={() => selectEmpresa(emp)}>
-                      Gestionar Cuentas
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => openEditEmpresa(emp)} className="text-blue-600">
-                      <Edit3 className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => openDeleteEmpresa(emp)} className="text-red-600">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {empresas.length === 0 && (
-            <div className="text-center py-12">
-              <Building className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-xl font-medium text-slate-600 mb-2">No hay empresas registradas</h3>
-              <p className="text-slate-500 mb-6">Crea tu primera empresa para comenzar</p>
-            </div>
-          )}
-        </div>
-
-        {/* Dialogs */}
-        <Dialog open={showNewEmpresa} onOpenChange={setShowNewEmpresa}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Crear Nueva Empresa</DialogTitle>
-              <DialogDescription>Ingresa los datos de la nueva empresa.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Nombre de la Empresa *</Label>
-                <Input
-                  value={empresaForm.nombre}
-                  onChange={(e) => setEmpresaForm({...empresaForm, nombre: e.target.value})}
-                  placeholder="Ej: Mi Empresa S.A."
-                />
-              </div>
-              <div>
-                <Label>RUT/CUIT</Label>
-                <Input
-                  value={empresaForm.rut_cuit}
-                  onChange={(e) => setEmpresaForm({...empresaForm, rut_cuit: e.target.value})}
-                  placeholder="Ej: 20-12345678-9"
-                />
-              </div>
-              <div>
-                <Label>Dirección</Label>
-                <Input
-                  value={empresaForm.direccion}
-                  onChange={(e) => setEmpresaForm({...empresaForm, direccion: e.target.value})}
-                  placeholder="Ej: Av. Principal 123"
-                />
-              </div>
-              <div>
-                <Label>Teléfono</Label>
-                <Input
-                  value={empresaForm.telefono}
-                  onChange={(e) => setEmpresaForm({...empresaForm, telefono: e.target.value})}
-                  placeholder="Ej: +54 11 1234-5678"
-                />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={empresaForm.email}
-                  onChange={(e) => setEmpresaForm({...empresaForm, email: e.target.value})}
-                  placeholder="Ej: contacto@miempresa.com"
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setShowNewEmpresa(false)} className="flex-1">
-                  Cancelar
-                </Button>
-                <Button onClick={createEmpresa} className="flex-1">
-                  Crear Empresa
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showEditEmpresa} onOpenChange={setShowEditEmpresa}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Editar Empresa
-              </DialogTitle>
-              <DialogDescription>Modifica los datos de {editingEmpresa?.nombre}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Nombre de la Empresa *</Label>
-                <Input
-                  value={empresaForm.nombre}
-                  onChange={(e) => setEmpresaForm({...empresaForm, nombre: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label>RUT/CUIT</Label>
-                <Input
-                  value={empresaForm.rut_cuit}
-                  onChange={(e) => setEmpresaForm({...empresaForm, rut_cuit: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label>Dirección</Label>
-                <Input
-                  value={empresaForm.direccion}
-                  onChange={(e) => setEmpresaForm({...empresaForm, direccion: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label>Teléfono</Label>
-                <Input
-                  value={empresaForm.telefono}
-                  onChange={(e) => setEmpresaForm({...empresaForm, telefono: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input
-                  value={empresaForm.email}
-                  onChange={(e) => setEmpresaForm({...empresaForm, email: e.target.value})}
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setShowEditEmpresa(false)} className="flex-1">
-                  Cancelar
-                </Button>
-                <Button onClick={updateEmpresa} className="flex-1">
-                  Actualizar
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showDeleteEmpresa} onOpenChange={setShowDeleteEmpresa}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                Confirmar Eliminación
-              </DialogTitle>
-              <DialogDescription>
-                ¿Eliminar empresa <strong>{deletingItem?.nombre}</strong>?
-                <br /><br />
-                <span className="text-red-600 font-semibold">⚠️ ADVERTENCIA:</span>
-                <br />
-                • Se eliminará la empresa y todos sus datos
-                <br />
-                • Se eliminarán todas las facturas asociadas
-                <br />
-                • Esta acción NO se puede deshacer
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowDeleteEmpresa(false)} className="flex-1">
-                Cancelar
-              </Button>
-              <Button onClick={deleteEmpresa} className="flex-1 bg-red-600 hover:bg-red-700">
-                Eliminar
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Toaster />
-      </div>
-    );
-  }
-
-  // Render empresa detail view
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <Button variant="outline" onClick={backToEmpresas} className="mb-4">
+            <Button variant="outline" onClick={onBackToEmpresas} className="mb-4">
               ← Volver a Empresas
             </Button>
             <h1 className="text-4xl font-bold text-slate-800 mb-2">{empresa?.nombre}</h1>
@@ -691,7 +520,7 @@ function App() {
               </div>
             )}
 
-            {resumen && resumen.proveedores.length > 0 && (
+            {resumen && resumen.proveedores && resumen.proveedores.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -711,7 +540,7 @@ function App() {
                     </TableHeader>
                     <TableBody>
                       {resumen.proveedores.map((prov, idx) => (
-                        <TableRow key={`prov-${idx}`}>
+                        <TableRow key={`prov-${idx}-${prov.proveedor}`}>
                           <TableCell className="font-medium">{prov.proveedor}</TableCell>
                           <TableCell className="font-semibold text-orange-600">
                             {formatCurrency(prov.total_deuda)}
@@ -736,7 +565,7 @@ function App() {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Lista de Facturas</CardTitle>
-                  <Button onClick={exportPendientes} variant="outline" className="text-green-600">
+                  <Button onClick={onExportPendientes} variant="outline" className="text-green-600">
                     <FileSpreadsheet className="h-4 w-4 mr-2" />
                     Exportar a Excel
                   </Button>
@@ -801,7 +630,7 @@ function App() {
                             {inv.estado_pago === "pendiente" ? (
                               <Button
                                 size="sm"
-                                onClick={() => updateInvoiceStatus(inv.id, "pagado")}
+                                onClick={() => onUpdateInvoiceStatus(inv.id, "pagado")}
                                 className="bg-green-600 hover:bg-green-700"
                               >
                                 Marcar Pagado
@@ -810,7 +639,7 @@ function App() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => updateInvoiceStatus(inv.id, "pendiente")}
+                                onClick={() => onUpdateInvoiceStatus(inv.id, "pendiente")}
                               >
                                 Marcar Pendiente
                               </Button>
@@ -819,7 +648,7 @@ function App() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => downloadPDF(inv.id, inv.numero_factura)}
+                                onClick={() => onDownloadPDF(inv.id, inv.numero_factura)}
                                 className="text-blue-600"
                               >
                                 <Download className="h-4 w-4" />
@@ -882,13 +711,13 @@ function App() {
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold text-purple-600">
-                          {estadoPagadas.facturas_por_proveedor.length}
+                          {estadoPagadas.facturas_por_proveedor ? estadoPagadas.facturas_por_proveedor.length : 0}
                         </div>
                       </CardContent>
                     </Card>
                   </div>
 
-                  {estadoPagadas.facturas_pagadas.length > 0 && (
+                  {estadoPagadas.facturas_pagadas && estadoPagadas.facturas_pagadas.length > 0 && (
                     <Card>
                       <CardHeader>
                         <div className="flex justify-between items-center">
@@ -896,7 +725,7 @@ function App() {
                             <CheckCircle className="h-5 w-5" />
                             Detalle de Facturas Pagadas
                           </CardTitle>
-                          <Button onClick={exportPagadas} variant="outline" className="text-green-600">
+                          <Button onClick={onExportPagadas} variant="outline" className="text-green-600">
                             <FileSpreadsheet className="h-4 w-4 mr-2" />
                             Exportar a Excel
                           </Button>
@@ -931,7 +760,7 @@ function App() {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => downloadPDF(fac.id, fac.numero_factura)}
+                                      onClick={() => onDownloadPDF(fac.id, fac.numero_factura)}
                                       className="text-blue-600"
                                     >
                                       <Download className="h-4 w-4" />
@@ -946,7 +775,7 @@ function App() {
                     </Card>
                   )}
 
-                  {estadoPagadas.facturas_pagadas.length === 0 && (
+                  {(!estadoPagadas.facturas_pagadas || estadoPagadas.facturas_pagadas.length === 0) && (
                     <Card>
                       <CardContent className="text-center py-8">
                         <CheckCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
@@ -967,7 +796,7 @@ function App() {
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <CardTitle>Resumen Financiero General</CardTitle>
-                      <Button onClick={exportResumen} variant="outline" className="text-green-600">
+                      <Button onClick={onExportResumen} variant="outline" className="text-green-600">
                         <FileSpreadsheet className="h-4 w-4 mr-2" />
                         Exportar a Excel
                       </Button>
@@ -999,7 +828,7 @@ function App() {
                   </CardContent>
                 </Card>
 
-                {resumen.proveedores.length > 0 && (
+                {resumen.proveedores && resumen.proveedores.length > 0 && (
                   <Card>
                     <CardHeader>
                       <CardTitle>Detalle por Proveedor</CardTitle>
@@ -1007,7 +836,7 @@ function App() {
                     <CardContent>
                       <div className="space-y-4">
                         {resumen.proveedores.map((prov, idx) => (
-                          <div key={`detail-${idx}`} className="flex justify-between items-center p-4 border rounded-lg">
+                          <div key={`detail-${idx}-${prov.proveedor}`} className="flex justify-between items-center p-4 border rounded-lg">
                             <div>
                               <h3 className="font-semibold text-slate-800">{prov.proveedor}</h3>
                               <p className="text-sm text-slate-600">
@@ -1032,7 +861,7 @@ function App() {
         </Tabs>
       </div>
 
-      {/* Dialogs */}
+      {/* Contract Edit Dialog */}
       <Dialog open={showContractEdit} onOpenChange={setShowContractEdit}>
         <DialogContent>
           <DialogHeader>
@@ -1054,32 +883,304 @@ function App() {
               />
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={closeDialogs} className="flex-1">Cancelar</Button>
-              <Button onClick={updateContract} className="flex-1">Actualizar</Button>
+              <Button variant="outline" onClick={() => setShowContractEdit(false)} className="flex-1">
+                Cancelar
+              </Button>
+              <Button onClick={handleUpdateContract} className="flex-1">
+                Actualizar
+              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Invoice Dialog */}
       <Dialog open={showDeleteInvoice} onOpenChange={setShowDeleteInvoice}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar Eliminación</DialogTitle>
             <DialogDescription>
-              ¿Eliminar factura <strong>{deletingItem?.numero_factura}</strong> de <strong>{deletingItem?.nombre_proveedor}</strong>?
+              ¿Eliminar factura <strong>{deletingInvoice?.numero_factura}</strong> de <strong>{deletingInvoice?.nombre_proveedor}</strong>?
               <br /><br />
               Esta acción eliminará también el archivo PDF asociado.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={closeDialogs} className="flex-1">Cancelar</Button>
-            <Button onClick={deleteInvoice} className="flex-1 bg-red-600 hover:bg-red-700">Eliminar</Button>
+            <Button variant="outline" onClick={() => setShowDeleteInvoice(false)} className="flex-1">
+              Cancelar
+            </Button>
+            <Button onClick={handleDeleteInvoice} className="flex-1 bg-red-600 hover:bg-red-700">
+              Eliminar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
-
-      <Toaster />
     </div>
+  );
+};
+
+// Main App component
+function App() {
+  const [view, setView] = useState("empresas");
+  const [empresa, setEmpresa] = useState(null);
+  const [empresas, setEmpresas] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [resumen, setResumen] = useState(null);
+  const [estadoPagadas, setEstadoPagadas] = useState(null);
+
+  const { toast } = useToast();
+  const downloadFile = useDownload();
+
+  // Load empresas on mount
+  useEffect(() => {
+    loadEmpresas();
+  }, []);
+
+  // Load empresa data when selected
+  useEffect(() => {
+    if (empresa && view === "empresa-detail") {
+      loadInvoices();
+      loadResumen();
+      loadEstadoPagadas();
+    }
+  }, [empresa, view]);
+
+  // API Functions
+  const loadEmpresas = async () => {
+    try {
+      const res = await axios.get(`${API}/empresas`);
+      setEmpresas(res.data);
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudieron cargar las empresas", variant: "destructive" });
+    }
+  };
+
+  const loadInvoices = async () => {
+    if (!empresa) return;
+    try {
+      const res = await axios.get(`${API}/invoices/${empresa.id}`);
+      setInvoices(res.data);
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudieron cargar las facturas", variant: "destructive" });
+    }
+  };
+
+  const loadResumen = async () => {
+    if (!empresa) return;
+    try {
+      const res = await axios.get(`${API}/resumen/general/${empresa.id}`);
+      setResumen(res.data);
+    } catch (error) {
+      console.error("Error loading resumen:", error);
+    }
+  };
+
+  const loadEstadoPagadas = async () => {
+    if (!empresa) return;
+    try {
+      const res = await axios.get(`${API}/estado-cuenta/pagadas/${empresa.id}`);
+      setEstadoPagadas(res.data);
+    } catch (error) {
+      console.error("Error loading estado pagadas:", error);
+    }
+  };
+
+  // Company actions
+  const selectEmpresa = (emp) => {
+    setEmpresa(emp);
+    setView("empresa-detail");
+    setInvoices([]);
+    setResumen(null);
+    setEstadoPagadas(null);
+  };
+
+  const backToEmpresas = () => {
+    setView("empresas");
+    setEmpresa(null);
+  };
+
+  const createEmpresa = async (empresaForm) => {
+    if (!empresaForm.nombre.trim()) {
+      toast({ title: "Error", description: "El nombre es requerido", variant: "destructive" });
+      return;
+    }
+    try {
+      await axios.post(`${API}/empresas`, empresaForm);
+      toast({ title: "Éxito", description: "Empresa creada correctamente" });
+      loadEmpresas();
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo crear la empresa", variant: "destructive" });
+    }
+  };
+
+  const editEmpresa = async (empresaId, empresaForm) => {
+    if (!empresaForm.nombre.trim()) return;
+    try {
+      await axios.put(`${API}/empresas/${empresaId}`, empresaForm);
+      toast({ title: "Éxito", description: "Empresa actualizada" });
+      loadEmpresas();
+      if (empresa && empresa.id === empresaId) {
+        setEmpresa({...empresa, ...empresaForm});
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
+    }
+  };
+
+  const deleteEmpresa = async (empresaId) => {
+    try {
+      const res = await axios.delete(`${API}/empresas/${empresaId}`);
+      toast({ 
+        title: "Empresa eliminada", 
+        description: `Empresa eliminada. ${res.data.facturas_eliminadas} facturas eliminadas.` 
+      });
+      loadEmpresas();
+      if (empresa && empresa.id === empresaId) {
+        backToEmpresas();
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });
+    }
+  };
+
+  // Invoice actions
+  const uploadPDF = async (file) => {
+    if (!file || !empresa) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+      await axios.post(`${API}/upload-pdf/${empresa.id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      toast({ title: "Éxito", description: "PDF procesado correctamente" });
+      loadInvoices();
+      loadResumen();
+      loadEstadoPagadas();
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error.response?.data?.detail || "Error procesando PDF",
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const updateInvoiceStatus = async (invoiceId, newStatus) => {
+    try {
+      await axios.put(`${API}/invoices/${invoiceId}/estado`, { estado_pago: newStatus });
+      toast({ title: "Actualizado", description: `Factura marcada como ${newStatus}` });
+      loadInvoices();
+      loadResumen();
+      loadEstadoPagadas();
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
+    }
+  };
+
+  const updateContract = async (invoiceId, contractNumber) => {
+    try {
+      await axios.put(`${API}/invoices/${invoiceId}/contrato`, {
+        numero_contrato: contractNumber || null
+      });
+      toast({ title: "Actualizado", description: "Número de contrato actualizado" });
+      loadInvoices();
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
+    }
+  };
+
+  const deleteInvoice = async (invoiceId) => {
+    try {
+      await axios.delete(`${API}/invoices/${invoiceId}`);
+      toast({ title: "Eliminada", description: "Factura eliminada correctamente" });
+      loadInvoices();
+      loadResumen();
+      loadEstadoPagadas();
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });
+    }
+  };
+
+  // Download functions using the safe download hook
+  const downloadPDF = async (invoiceId, numeroFactura) => {
+    try {
+      const res = await axios.get(`${API}/invoices/${invoiceId}/download`, { responseType: 'blob' });
+      downloadFile(res.data, `factura_${numeroFactura}.pdf`);
+      toast({ title: "Descarga iniciada", description: `PDF de factura ${numeroFactura}` });
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo descargar", variant: "destructive" });
+    }
+  };
+
+  const exportPendientes = async () => {
+    if (!empresa) return;
+    try {
+      const res = await axios.get(`${API}/export/facturas-pendientes/${empresa.id}`, { responseType: 'blob' });
+      downloadFile(res.data, `facturas_pendientes_${empresa.nombre.replace(/\s+/g, '_')}.xlsx`);
+      toast({ title: "Exportado", description: "Excel de facturas pendientes descargado" });
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo exportar", variant: "destructive" });
+    }
+  };
+
+  const exportPagadas = async () => {
+    if (!empresa) return;
+    try {
+      const res = await axios.get(`${API}/export/facturas-pagadas/${empresa.id}`, { responseType: 'blob' });
+      downloadFile(res.data, `facturas_pagadas_${empresa.nombre.replace(/\s+/g, '_')}.xlsx`);
+      toast({ title: "Exportado", description: "Excel de facturas pagadas descargado" });
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo exportar", variant: "destructive" });
+    }
+  };
+
+  const exportResumen = async () => {
+    if (!empresa) return;
+    try {
+      const res = await axios.get(`${API}/export/resumen-general/${empresa.id}`, { responseType: 'blob' });
+      downloadFile(res.data, `resumen_general_${empresa.nombre.replace(/\s+/g, '_')}.xlsx`);
+      toast({ title: "Exportado", description: "Excel de resumen general descargado" });
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo exportar", variant: "destructive" });
+    }
+  };
+
+  // Render appropriate view
+  if (view === "empresas") {
+    return (
+      <>
+        <CompanyManager
+          empresas={empresas}
+          onSelectEmpresa={selectEmpresa}
+          onCreateEmpresa={createEmpresa}
+          onEditEmpresa={editEmpresa}
+          onDeleteEmpresa={deleteEmpresa}
+        />
+        <Toaster />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <InvoiceManager
+        empresa={empresa}
+        invoices={invoices}
+        resumen={resumen}
+        estadoPagadas={estadoPagadas}
+        onBackToEmpresas={backToEmpresas}
+        onUploadPDF={uploadPDF}
+        onUpdateInvoiceStatus={updateInvoiceStatus}
+        onUpdateContract={updateContract}
+        onDeleteInvoice={deleteInvoice}
+        onDownloadPDF={downloadPDF}
+        onExportPendientes={exportPendientes}
+        onExportPagadas={exportPagadas}
+        onExportResumen={exportResumen}
+      />
+      <Toaster />
+    </>
   );
 }
 
