@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
 import axios from "axios";
 import { Button } from "./components/ui/button";
@@ -17,324 +17,208 @@ import { Toaster } from "./components/ui/sonner";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Hook personalizado para manejar descargas SIN manipulación DOM
-const useSecureDownload = () => {
-  const download = useCallback((blob, filename) => {
-    // Usar la API moderna de navegador sin manipular DOM
-    if ('showSaveFilePicker' in window) {
-      // API moderna de File System Access
-      window.showSaveFilePicker({
-        suggestedName: filename,
-        types: [{
-          description: 'Files',
-          accept: {
-            'application/pdf': ['.pdf'],
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
-          }
-        }]
-      }).then(fileHandle => {
-        fileHandle.createWritable().then(writable => {
-          writable.write(blob).then(() => {
-            writable.close();
-          });
-        });
-      }).catch(() => {
-        // Fallback para navegadores que no soportan la API
-        fallbackDownload(blob, filename);
-      });
-    } else {
-      // Fallback directo
-      fallbackDownload(blob, filename);
-    }
-  }, []);
-  
-  const fallbackDownload = useCallback((blob, filename) => {
-    const url = URL.createObjectURL(blob);
-    // Usar window.open en lugar de manipular DOM
-    const newWindow = window.open(url, '_blank');
-    if (newWindow) {
-      newWindow.onload = () => {
-        URL.revokeObjectURL(url);
-        newWindow.close();
-      };
-    } else {
-      // Último recurso: forzar descarga via location
-      window.location.href = url;
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-  }, []);
-  
-  return download;
+// Simple download function without DOM manipulation
+const triggerDownload = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
 function App() {
-  // Hook para descargas seguras
-  const downloadFile = useSecureDownload();
-  
-  // Estados principales
-  const [currentView, setCurrentView] = useState("empresas"); // "empresas" o "empresa-detail"
-  const [selectedEmpresa, setSelectedEmpresa] = useState(null);
+  // Main states
+  const [view, setView] = useState("empresas");
+  const [empresa, setEmpresa] = useState(null);
   const [empresas, setEmpresas] = useState([]);
   
-  // Estados para nueva empresa
-  const [newEmpresa, setNewEmpresa] = useState({
-    nombre: "",
-    rut_cuit: "",
-    direccion: "",
-    telefono: "",
-    email: ""
-  });
-  const [showNewEmpresaDialog, setShowNewEmpresaDialog] = useState(false);
-  
-  // Estados de la aplicación de facturas (cuando hay empresa seleccionada)
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  // Invoice states  
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
-  const [resumenGeneral, setResumenGeneral] = useState(null);
-  const [estadoCuentaPagadas, setEstadoCuentaPagadas] = useState(null);
+  const [resumen, setResumen] = useState(null);
+  const [estadoPagadas, setEstadoPagadas] = useState(null);
+  
+  // Form states
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [filterEstado, setFilterEstado] = useState("todos");
   const [filterProveedor, setFilterProveedor] = useState("");
   
-  // Estados para confirmación de eliminación
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
+  // Dialog states
+  const [showNewEmpresa, setShowNewEmpresa] = useState(false);
+  const [showEditEmpresa, setShowEditEmpresa] = useState(false);
+  const [showDeleteEmpresa, setShowDeleteEmpresa] = useState(false);
+  const [showDeleteInvoice, setShowDeleteInvoice] = useState(false);
+  const [showContractEdit, setShowContractEdit] = useState(false);
   
-  // Estados para edición de número de contrato
-  const [showContractDialog, setShowContractDialog] = useState(false);
-  const [invoiceToEditContract, setInvoiceToEditContract] = useState(null);
-  const [contractNumber, setContractNumber] = useState("");
-  
-  // Estados para gestión de empresas
-  const [showEditEmpresaDialog, setShowEditEmpresaDialog] = useState(false);
-  const [showDeleteEmpresaDialog, setShowDeleteEmpresaDialog] = useState(false);
-  const [empresaToEdit, setEmpresaToEdit] = useState(null);
-  const [empresaToDelete, setEmpresaToDelete] = useState(null);
-  const [editEmpresaData, setEditEmpresaData] = useState({
-    nombre: "",
-    rut_cuit: "",
-    direccion: "",
-    telefono: "",
-    email: ""
+  // Edit states
+  const [empresaForm, setEmpresaForm] = useState({
+    nombre: "", rut_cuit: "", direccion: "", telefono: "", email: ""
   });
-  
-  // Refs para control de montaje - Simplificado
-  const mountedRef = useRef(true);
-  
+  const [contractForm, setContractForm] = useState("");
+  const [editingEmpresa, setEditingEmpresa] = useState(null);
+  const [editingInvoice, setEditingInvoice] = useState(null);
+  const [deletingItem, setDeletingItem] = useState(null);
+
   const { toast } = useToast();
 
-  // Cleanup al desmontar - Simplificado
+  // Load empresas on mount
   useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
+    loadEmpresas();
   }, []);
 
-  // Cargar empresas al iniciar
+  // Load empresa data when selected
   useEffect(() => {
-    fetchEmpresas();
-  }, []);
-
-  // Cargar datos de la empresa cuando se selecciona una
-  useEffect(() => {
-    if (selectedEmpresa && currentView === "empresa-detail") {
-      fetchInvoices();
-      fetchResumenGeneral();
-      fetchEstadoCuentaPagadas();
+    if (empresa && view === "empresa-detail") {
+      loadInvoices();
+      loadResumen();
+      loadEstadoPagadas();
     }
-  }, [selectedEmpresa, currentView]);
+  }, [empresa, view]);
 
-  // Aplicar filtros
+  // Filter invoices
   useEffect(() => {
-    let filtered = invoices;
-    
+    let filtered = [...invoices];
     if (filterEstado !== "todos") {
-      filtered = filtered.filter(invoice => invoice.estado_pago === filterEstado);
+      filtered = filtered.filter(inv => inv.estado_pago === filterEstado);
     }
-    
     if (filterProveedor) {
-      filtered = filtered.filter(invoice => 
-        invoice.nombre_proveedor.toLowerCase().includes(filterProveedor.toLowerCase())
+      filtered = filtered.filter(inv => 
+        inv.nombre_proveedor.toLowerCase().includes(filterProveedor.toLowerCase())
       );
     }
-    
     setFilteredInvoices(filtered);
   }, [invoices, filterEstado, filterProveedor]);
 
-  // ===== FUNCIONES DE EMPRESA =====
-  const fetchEmpresas = useCallback(async () => {
+  // API Functions
+  const loadEmpresas = async () => {
     try {
-      const response = await axios.get(`${API}/empresas`);
-      if (mountedRef.current) {
-        setEmpresas(response.data);
-      }
+      const res = await axios.get(`${API}/empresas`);
+      setEmpresas(res.data);
     } catch (error) {
-      console.error("Error fetching empresas:", error);
-      if (mountedRef.current) {
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar las empresas",
-          variant: "destructive",
-        });
-      }
-    }
-  }, [toast]);
-
-  const createEmpresa = async () => {
-    if (!newEmpresa.nombre.trim()) {
-      toast({
-        title: "Error",
-        description: "El nombre de la empresa es requerido",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await axios.post(`${API}/empresas`, newEmpresa);
-      
-      toast({
-        title: "¡Éxito!",
-        description: "Empresa creada correctamente",
-      });
-
-      setNewEmpresa({
-        nombre: "",
-        rut_cuit: "",
-        direccion: "",
-        telefono: "",
-        email: ""
-      });
-      setShowNewEmpresaDialog(false);
-      fetchEmpresas();
-    } catch (error) {
-      console.error("Error creating empresa:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo crear la empresa",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudieron cargar las empresas", variant: "destructive" });
     }
   };
 
-  const selectEmpresa = (empresa) => {
-    setSelectedEmpresa(empresa);
-    setCurrentView("empresa-detail");
-    // Limpiar datos anteriores
+  const loadInvoices = async () => {
+    if (!empresa) return;
+    try {
+      const res = await axios.get(`${API}/invoices/${empresa.id}`);
+      setInvoices(res.data);
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudieron cargar las facturas", variant: "destructive" });
+    }
+  };
+
+  const loadResumen = async () => {
+    if (!empresa) return;
+    try {
+      const res = await axios.get(`${API}/resumen/general/${empresa.id}`);
+      setResumen(res.data);
+    } catch (error) {
+      console.error("Error loading resumen:", error);
+    }
+  };
+
+  const loadEstadoPagadas = async () => {
+    if (!empresa) return;
+    try {
+      const res = await axios.get(`${API}/estado-cuenta/pagadas/${empresa.id}`);
+      setEstadoPagadas(res.data);
+    } catch (error) {
+      console.error("Error loading estado pagadas:", error);
+    }
+  };
+
+  // Actions
+  const selectEmpresa = (emp) => {
+    setEmpresa(emp);
+    setView("empresa-detail");
     setInvoices([]);
-    setResumenGeneral(null);
-    setEstadoCuentaPagadas(null);
-    setFilterEstado("todos");
-    setFilterProveedor("");
+    setResumen(null);
+    setEstadoPagadas(null);
   };
 
   const backToEmpresas = () => {
-    setCurrentView("empresas");
-    setSelectedEmpresa(null);
+    setView("empresas");
+    setEmpresa(null);
   };
 
-  // ===== FUNCIONES DE FACTURAS (cuando hay empresa seleccionada) =====
-  const fetchInvoices = async () => {
-    if (!selectedEmpresa) return;
-    
-    try {
-      const response = await axios.get(`${API}/invoices/${selectedEmpresa.id}`);
-      setInvoices(response.data);
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las facturas",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchResumenGeneral = async () => {
-    if (!selectedEmpresa) return;
-    
-    try {
-      const response = await axios.get(`${API}/resumen/general/${selectedEmpresa.id}`);
-      setResumenGeneral(response.data);
-    } catch (error) {
-      console.error("Error fetching resumen:", error);
-    }
-  };
-
-  const fetchEstadoCuentaPagadas = async () => {
-    if (!selectedEmpresa) return;
-    
-    try {
-      const response = await axios.get(`${API}/estado-cuenta/pagadas/${selectedEmpresa.id}`);
-      setEstadoCuentaPagadas(response.data);
-    } catch (error) {
-      console.error("Error fetching estado cuenta pagadas:", error);
-    }
-  };
-
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0];
-    if (file && file.type === "application/pdf") {
-      setSelectedFile(file);
-    } else {
-      toast({
-        title: "Error",
-        description: "Por favor selecciona un archivo PDF válido",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!selectedFile) {
-      toast({
-        title: "Error",
-        description: "Por favor selecciona un archivo PDF",
-        variant: "destructive",
-      });
+  const createEmpresa = async () => {
+    if (!empresaForm.nombre.trim()) {
+      toast({ title: "Error", description: "El nombre es requerido", variant: "destructive" });
       return;
     }
-
-    if (!selectedEmpresa) {
-      toast({
-        title: "Error",
-        description: "No hay empresa seleccionada",
-        variant: "destructive",
-      });
-      return;
+    try {
+      await axios.post(`${API}/empresas`, empresaForm);
+      toast({ title: "Éxito", description: "Empresa creada correctamente" });
+      setEmpresaForm({ nombre: "", rut_cuit: "", direccion: "", telefono: "", email: "" });
+      setShowNewEmpresa(false);
+      loadEmpresas();
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo crear la empresa", variant: "destructive" });
     }
+  };
 
+  const updateEmpresa = async () => {
+    if (!editingEmpresa || !empresaForm.nombre.trim()) return;
+    try {
+      await axios.put(`${API}/empresas/${editingEmpresa.id}`, empresaForm);
+      toast({ title: "Éxito", description: "Empresa actualizada" });
+      setShowEditEmpresa(false);
+      loadEmpresas();
+      if (empresa && empresa.id === editingEmpresa.id) {
+        setEmpresa({...editingEmpresa, ...empresaForm});
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
+    }
+  };
+
+  const deleteEmpresa = async () => {
+    if (!deletingItem) return;
+    try {
+      const res = await axios.delete(`${API}/empresas/${deletingItem.id}`);
+      toast({ 
+        title: "Empresa eliminada", 
+        description: `${deletingItem.nombre} eliminada. ${res.data.facturas_eliminadas} facturas eliminadas.` 
+      });
+      setShowDeleteEmpresa(false);
+      setDeletingItem(null);
+      loadEmpresas();
+      if (empresa && empresa.id === deletingItem.id) {
+        backToEmpresas();
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });
+    }
+  };
+
+  const uploadPDF = async () => {
+    if (!selectedFile || !empresa) return;
     setUploading(true);
     const formData = new FormData();
     formData.append("file", selectedFile);
-
+    
     try {
-      const response = await axios.post(`${API}/upload-pdf/${selectedEmpresa.id}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      await axios.post(`${API}/upload-pdf/${empresa.id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
-
-      toast({
-        title: "¡Éxito!",
-        description: "PDF procesado correctamente. Datos extraídos automáticamente.",
-      });
-
+      toast({ title: "Éxito", description: "PDF procesado correctamente" });
       setSelectedFile(null);
-      fetchInvoices();
-      fetchResumenGeneral();
-      fetchEstadoCuentaPagadas();
-      
-      // Limpiar el input
       document.getElementById("pdf-upload").value = "";
-      
+      loadInvoices();
+      loadResumen();
+      loadEstadoPagadas();
     } catch (error) {
-      console.error("Error uploading PDF:", error);
-      toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Error procesando el PDF",
-        variant: "destructive",
+      toast({ 
+        title: "Error", 
+        description: error.response?.data?.detail || "Error procesando PDF",
+        variant: "destructive" 
       });
     } finally {
       setUploading(false);
@@ -343,459 +227,195 @@ function App() {
 
   const updateInvoiceStatus = async (invoiceId, newStatus) => {
     try {
-      await axios.put(`${API}/invoices/${invoiceId}/estado`, {
-        estado_pago: newStatus
-      });
-
-      toast({
-        title: "¡Actualizado!",
-        description: `Factura marcada como ${newStatus}`,
-      });
-
-      fetchInvoices();
-      fetchResumenGeneral();
-      fetchEstadoCuentaPagadas();
+      await axios.put(`${API}/invoices/${invoiceId}/estado`, { estado_pago: newStatus });
+      toast({ title: "Actualizado", description: `Factura marcada como ${newStatus}` });
+      loadInvoices();
+      loadResumen();
+      loadEstadoPagadas();
     } catch (error) {
-      console.error("Error updating status:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el estado de la factura",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
     }
   };
 
-  const downloadInvoicePDF = async (invoiceId, numeroFactura) => {
+  const updateContract = async () => {
+    if (!editingInvoice) return;
     try {
-      const response = await axios.get(`${API}/invoices/${invoiceId}/download`, {
-        responseType: 'blob'
+      await axios.put(`${API}/invoices/${editingInvoice.id}/contrato`, {
+        numero_contrato: contractForm || null
       });
-
-      downloadFile(response.data, `factura_${numeroFactura}.pdf`);
-
-      toast({
-        title: "¡Descarga iniciada!",
-        description: `PDF de la factura ${numeroFactura} descargado`,
-      });
+      toast({ title: "Actualizado", description: "Número de contrato actualizado" });
+      setShowContractEdit(false);
+      setEditingInvoice(null);
+      setContractForm("");
+      loadInvoices();
     } catch (error) {
-      console.error("Error downloading PDF:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo descargar el PDF de la factura",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
     }
-  };
-
-  const confirmDeleteInvoice = (invoice) => {
-    // Cerrar otros diálogos antes de abrir este
-    setShowContractDialog(false);
-    setShowEditEmpresaDialog(false);
-    setShowDeleteEmpresaDialog(false);
-    
-    setInvoiceToDelete(invoice);
-    setShowDeleteDialog(true);
   };
 
   const deleteInvoice = async () => {
-    if (!invoiceToDelete) return;
-
+    if (!deletingItem) return;
     try {
-      await axios.delete(`${API}/invoices/${invoiceToDelete.id}`);
-
-      toast({
-        title: "¡Eliminada!",
-        description: `Factura ${invoiceToDelete.numero_factura} eliminada correctamente`,
-      });
-
-      setShowDeleteDialog(false);
-      setInvoiceToDelete(null);
-      fetchInvoices();
-      fetchResumenGeneral();
-      fetchEstadoCuentaPagadas();
+      await axios.delete(`${API}/invoices/${deletingItem.id}`);
+      toast({ title: "Eliminada", description: `Factura ${deletingItem.numero_factura} eliminada` });
+      setShowDeleteInvoice(false);
+      setDeletingItem(null);
+      loadInvoices();
+      loadResumen();
+      loadEstadoPagadas();
     } catch (error) {
-      console.error("Error deleting invoice:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar la factura",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });
     }
   };
 
-  // ===== FUNCIONES DE EXPORTACIÓN A EXCEL =====
-  const exportFacturasPendientes = async () => {
-    if (!selectedEmpresa) return;
-    
+  // Download functions
+  const downloadPDF = async (invoiceId, numeroFactura) => {
     try {
-      const response = await axios.get(`${API}/export/facturas-pendientes/${selectedEmpresa.id}`, {
-        responseType: 'blob'
-      });
-
-      downloadFile(response.data, `facturas_pendientes_${selectedEmpresa.nombre.replace(/\s+/g, '_')}.xlsx`);
-
-      toast({
-        title: "¡Exportación exitosa!",
-        description: "Archivo Excel de facturas pendientes descargado",
-      });
+      const res = await axios.get(`${API}/invoices/${invoiceId}/download`, { responseType: 'blob' });
+      triggerDownload(res.data, `factura_${numeroFactura}.pdf`);
+      toast({ title: "Descarga iniciada", description: `PDF de factura ${numeroFactura}` });
     } catch (error) {
-      console.error("Error exporting pending invoices:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo exportar las facturas pendientes",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo descargar", variant: "destructive" });
     }
   };
 
-  const exportFacturasPagadas = async () => {
-    if (!selectedEmpresa) return;
-    
+  const exportPendientes = async () => {
+    if (!empresa) return;
     try {
-      const response = await axios.get(`${API}/export/facturas-pagadas/${selectedEmpresa.id}`, {
-        responseType: 'blob'
-      });
-
-      downloadFile(response.data, `facturas_pagadas_${selectedEmpresa.nombre.replace(/\s+/g, '_')}.xlsx`);
-
-      toast({
-        title: "¡Exportación exitosa!",
-        description: "Archivo Excel de facturas pagadas descargado",
-      });
+      const res = await axios.get(`${API}/export/facturas-pendientes/${empresa.id}`, { responseType: 'blob' });
+      triggerDownload(res.data, `facturas_pendientes_${empresa.nombre.replace(/\s+/g, '_')}.xlsx`);
+      toast({ title: "Exportado", description: "Excel de facturas pendientes descargado" });
     } catch (error) {
-      console.error("Error exporting paid invoices:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo exportar las facturas pagadas",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo exportar", variant: "destructive" });
     }
   };
 
-  const exportResumenGeneral = async () => {
-    if (!selectedEmpresa) return;
-    
+  const exportPagadas = async () => {
+    if (!empresa) return;
     try {
-      const response = await axios.get(`${API}/export/resumen-general/${selectedEmpresa.id}`, {
-        responseType: 'blob'
-      });
-
-      downloadFile(response.data, `resumen_general_${selectedEmpresa.nombre.replace(/\s+/g, '_')}.xlsx`);
-
-      toast({
-        title: "¡Exportación exitosa!",
-        description: "Archivo Excel de resumen general descargado",
-      });
+      const res = await axios.get(`${API}/export/facturas-pagadas/${empresa.id}`, { responseType: 'blob' });
+      triggerDownload(res.data, `facturas_pagadas_${empresa.nombre.replace(/\s+/g, '_')}.xlsx`);
+      toast({ title: "Exportado", description: "Excel de facturas pagadas descargado" });
     } catch (error) {
-      console.error("Error exporting general summary:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo exportar el resumen general",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo exportar", variant: "destructive" });
     }
   };
 
-  // ===== FUNCIONES DE GESTIÓN DE EMPRESAS =====
-  const openEditEmpresa = (empresa) => {
-    // Cerrar otros diálogos antes de abrir este
-    setShowDeleteDialog(false);
-    setShowContractDialog(false);
-    setShowDeleteEmpresaDialog(false);
-    
-    setEmpresaToEdit(empresa);
-    setEditEmpresaData({
-      nombre: empresa.nombre || "",
-      rut_cuit: empresa.rut_cuit || "",
-      direccion: empresa.direccion || "",
-      telefono: empresa.telefono || "",
-      email: empresa.email || ""
+  const exportResumen = async () => {
+    if (!empresa) return;
+    try {
+      const res = await axios.get(`${API}/export/resumen-general/${empresa.id}`, { responseType: 'blob' });
+      triggerDownload(res.data, `resumen_general_${empresa.nombre.replace(/\s+/g, '_')}.xlsx`);
+      toast({ title: "Exportado", description: "Excel de resumen general descargado" });
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo exportar", variant: "destructive" });
+    }
+  };
+
+  // Helper functions
+  const formatCurrency = (amount) => new Intl.NumberFormat("es-AR", {
+    style: "currency", currency: "ARS"
+  }).format(amount);
+
+  const formatDate = (dateString) => new Date(dateString).toLocaleDateString("es-AR");
+
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type === "application/pdf") {
+      setSelectedFile(file);
+    } else {
+      toast({ title: "Error", description: "Selecciona un archivo PDF válido", variant: "destructive" });
+    }
+  };
+
+  // Open dialog functions
+  const openNewEmpresa = () => {
+    setEmpresaForm({ nombre: "", rut_cuit: "", direccion: "", telefono: "", email: "" });
+    setShowNewEmpresa(true);
+  };
+
+  const openEditEmpresa = (emp) => {
+    setEditingEmpresa(emp);
+    setEmpresaForm({
+      nombre: emp.nombre || "",
+      rut_cuit: emp.rut_cuit || "",
+      direccion: emp.direccion || "",
+      telefono: emp.telefono || "",
+      email: emp.email || ""
     });
-    setShowEditEmpresaDialog(true);
+    setShowEditEmpresa(true);
   };
 
-  const updateEmpresa = async () => {
-    if (!empresaToEdit) return;
-
-    if (!editEmpresaData.nombre.trim()) {
-      toast({
-        title: "Error",
-        description: "El nombre de la empresa es requerido",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await axios.put(`${API}/empresas/${empresaToEdit.id}`, editEmpresaData);
-      
-      toast({
-        title: "¡Actualizada!",
-        description: "Datos de la empresa actualizados correctamente",
-      });
-
-      setShowEditEmpresaDialog(false);
-      setEmpresaToEdit(null);
-      fetchEmpresas();
-      
-      // Si estamos editando la empresa seleccionada, actualizar la información
-      if (selectedEmpresa && selectedEmpresa.id === empresaToEdit.id) {
-        setSelectedEmpresa({...empresaToEdit, ...editEmpresaData});
-      }
-      
-    } catch (error) {
-      console.error("Error updating empresa:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar la empresa",
-        variant: "destructive",
-      });
-    }
+  const openDeleteEmpresa = (emp) => {
+    setDeletingItem(emp);
+    setShowDeleteEmpresa(true);
   };
 
-  const confirmDeleteEmpresa = (empresa) => {
-    // Cerrar otros diálogos antes de abrir este
-    setShowDeleteDialog(false);
-    setShowContractDialog(false);
-    setShowEditEmpresaDialog(false);
-    
-    setEmpresaToDelete(empresa);
-    setShowDeleteEmpresaDialog(true);
+  const openContractEdit = (invoice) => {
+    setEditingInvoice(invoice);
+    setContractForm(invoice.numero_contrato || "");
+    setShowContractEdit(true);
   };
 
-  const deleteEmpresa = async () => {
-    if (!empresaToDelete) return;
-
-    try {
-      const response = await axios.delete(`${API}/empresas/${empresaToDelete.id}`);
-      
-      toast({
-        title: "¡Empresa eliminada!",
-        description: `${empresaToDelete.nombre} eliminada correctamente. ${response.data.facturas_eliminadas} facturas eliminadas.`,
-      });
-
-      setShowDeleteEmpresaDialog(false);
-      setEmpresaToDelete(null);
-      fetchEmpresas();
-      
-      // Si eliminamos la empresa seleccionada, volver al panel principal
-      if (selectedEmpresa && selectedEmpresa.id === empresaToDelete.id) {
-        backToEmpresas();
-      }
-      
-    } catch (error) {
-      console.error("Error deleting empresa:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar la empresa",
-        variant: "destructive",
-      });
-    }
+  const openDeleteInvoice = (invoice) => {
+    setDeletingItem(invoice);
+    setShowDeleteInvoice(true);
   };
 
-
-  const openContractDialog = (invoice) => {
-    // Cerrar otros diálogos antes de abrir este
-    setShowDeleteDialog(false);
-    setShowEditEmpresaDialog(false);
-    setShowDeleteEmpresaDialog(false);
-    
-    setInvoiceToEditContract(invoice);
-    setContractNumber(invoice.numero_contrato || "");
-    setShowContractDialog(true);
+  // Close all dialogs
+  const closeDialogs = () => {
+    setShowNewEmpresa(false);
+    setShowEditEmpresa(false);
+    setShowDeleteEmpresa(false);
+    setShowDeleteInvoice(false);
+    setShowContractEdit(false);
+    setEditingEmpresa(null);
+    setEditingInvoice(null);
+    setDeletingItem(null);
   };
 
-  const updateContractNumber = async () => {
-    if (!invoiceToEditContract) return;
-
-    try {
-      await axios.put(`${API}/invoices/${invoiceToEditContract.id}/contrato`, {
-        numero_contrato: contractNumber || null
-      });
-
-      toast({
-        title: "¡Actualizado!",
-        description: "Número de contrato actualizado correctamente",
-      });
-
-      setShowContractDialog(false);
-      setInvoiceToEditContract(null);
-      setContractNumber("");
-      fetchInvoices();
-      fetchResumenGeneral();
-      fetchEstadoCuentaPagadas();
-    } catch (error) {
-      console.error("Error updating contract number:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el número de contrato",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("es-AR", {
-      style: "currency",
-      currency: "ARS",
-    }).format(amount);
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("es-AR");
-  };
-
-  // ===== RENDER CONDICIONAL =====
-  if (currentView === "empresas") {
+  // Render empresas list view
+  if (view === "empresas") {
     return (
       <div className="min-h-screen bg-slate-50">
         <div className="container mx-auto px-4 py-8 max-w-6xl">
           <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold text-slate-800 mb-4">
-              Panel de Gestión Empresarial
-            </h1>
-            <p className="text-slate-600 text-xl">
-              Gestiona las cuentas por pagar de todas tus empresas desde un solo lugar
-            </p>
+            <h1 className="text-5xl font-bold text-slate-800 mb-4">Panel de Gestión Empresarial</h1>
+            <p className="text-slate-600 text-xl">Gestiona las cuentas por pagar de todas tus empresas</p>
           </div>
 
-          {/* Botón para crear nueva empresa */}
           <div className="mb-8 text-center">
-            <Dialog open={showNewEmpresaDialog} onOpenChange={setShowNewEmpresaDialog}>
-              <DialogTrigger asChild>
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="h-5 w-5 mr-2" />
-                  Nueva Empresa
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Crear Nueva Empresa</DialogTitle>
-                  <DialogDescription>
-                    Ingresa los datos de la nueva empresa para comenzar a gestionar sus cuentas por pagar.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="nombre">Nombre de la Empresa *</Label>
-                    <Input
-                      id="nombre"
-                      value={newEmpresa.nombre}
-                      onChange={(e) => setNewEmpresa({...newEmpresa, nombre: e.target.value})}
-                      placeholder="Ej: Mi Empresa S.A."
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rut_cuit">RUT/CUIT</Label>
-                    <Input
-                      id="rut_cuit"
-                      value={newEmpresa.rut_cuit}
-                      onChange={(e) => setNewEmpresa({...newEmpresa, rut_cuit: e.target.value})}
-                      placeholder="Ej: 20-12345678-9"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="direccion">Dirección</Label>
-                    <Input
-                      id="direccion"
-                      value={newEmpresa.direccion}
-                      onChange={(e) => setNewEmpresa({...newEmpresa, direccion: e.target.value})}
-                      placeholder="Ej: Av. Principal 123"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="telefono">Teléfono</Label>
-                    <Input
-                      id="telefono"
-                      value={newEmpresa.telefono}
-                      onChange={(e) => setNewEmpresa({...newEmpresa, telefono: e.target.value})}
-                      placeholder="Ej: +54 11 1234-5678"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={newEmpresa.email}
-                      onChange={(e) => setNewEmpresa({...newEmpresa, email: e.target.value})}
-                      placeholder="Ej: contacto@miempresa.com"
-                    />
-                  </div>
-                  <div className="flex gap-3 pt-4">
-                    <Button variant="outline" onClick={() => setShowNewEmpresaDialog(false)} className="flex-1">
-                      Cancelar
-                    </Button>
-                    <Button onClick={createEmpresa} className="flex-1">
-                      Crear Empresa
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-700" onClick={openNewEmpresa}>
+              <Plus className="h-5 w-5 mr-2" />
+              Nueva Empresa
+            </Button>
           </div>
 
-          {/* Lista de empresas */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {empresas.map((empresa) => (
-              <Card 
-                key={`empresa-${empresa.id}`}
-                className="hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-blue-300"
-                onClick={() => selectEmpresa(empresa)}
-              >
+            {empresas.map((emp) => (
+              <Card key={`empresa-${emp.id}`} className="hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-300">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <Building className="h-8 w-8 text-blue-600" />
                     <ArrowRight className="h-5 w-5 text-slate-400" />
                   </div>
-                  <CardTitle className="text-xl">{empresa.nombre}</CardTitle>
-                  {empresa.rut_cuit && (
-                    <CardDescription>RUT/CUIT: {empresa.rut_cuit}</CardDescription>
-                  )}
+                  <CardTitle className="text-xl">{emp.nombre}</CardTitle>
+                  {emp.rut_cuit && <CardDescription>RUT/CUIT: {emp.rut_cuit}</CardDescription>}
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm text-slate-600">
-                    {empresa.direccion && (
-                      <p>📍 {empresa.direccion}</p>
-                    )}
-                    {empresa.telefono && (
-                      <p>📞 {empresa.telefono}</p>
-                    )}
-                    {empresa.email && (
-                      <p>📧 {empresa.email}</p>
-                    )}
+                    {emp.direccion && <p>📍 {emp.direccion}</p>}
+                    {emp.telefono && <p>📞 {emp.telefono}</p>}
+                    {emp.email && <p>📧 {emp.email}</p>}
                   </div>
                   <div className="flex gap-2 mt-4">
-                    <Button 
-                      className="flex-1" 
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        selectEmpresa(empresa);
-                      }}
-                    >
+                    <Button className="flex-1" variant="outline" onClick={() => selectEmpresa(emp)}>
                       Gestionar Cuentas
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditEmpresa(empresa);
-                      }}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
+                    <Button size="sm" variant="outline" onClick={() => openEditEmpresa(emp)} className="text-blue-600">
                       <Edit3 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        confirmDeleteEmpresa(empresa);
-                      }}
-                      className="text-red-600 hover:text-red-700"
-                    >
+                    <Button size="sm" variant="outline" onClick={() => openDeleteEmpresa(emp)} className="text-red-600">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -807,39 +427,177 @@ function App() {
           {empresas.length === 0 && (
             <div className="text-center py-12">
               <Building className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-xl font-medium text-slate-600 mb-2">
-                No hay empresas registradas
-              </h3>
-              <p className="text-slate-500 mb-6">
-                Crea tu primera empresa para comenzar a gestionar las cuentas por pagar
-              </p>
+              <h3 className="text-xl font-medium text-slate-600 mb-2">No hay empresas registradas</h3>
+              <p className="text-slate-500 mb-6">Crea tu primera empresa para comenzar</p>
             </div>
           )}
         </div>
+
+        {/* Dialogs */}
+        <Dialog open={showNewEmpresa} onOpenChange={setShowNewEmpresa}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Crear Nueva Empresa</DialogTitle>
+              <DialogDescription>Ingresa los datos de la nueva empresa.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Nombre de la Empresa *</Label>
+                <Input
+                  value={empresaForm.nombre}
+                  onChange={(e) => setEmpresaForm({...empresaForm, nombre: e.target.value})}
+                  placeholder="Ej: Mi Empresa S.A."
+                />
+              </div>
+              <div>
+                <Label>RUT/CUIT</Label>
+                <Input
+                  value={empresaForm.rut_cuit}
+                  onChange={(e) => setEmpresaForm({...empresaForm, rut_cuit: e.target.value})}
+                  placeholder="Ej: 20-12345678-9"
+                />
+              </div>
+              <div>
+                <Label>Dirección</Label>
+                <Input
+                  value={empresaForm.direccion}
+                  onChange={(e) => setEmpresaForm({...empresaForm, direccion: e.target.value})}
+                  placeholder="Ej: Av. Principal 123"
+                />
+              </div>
+              <div>
+                <Label>Teléfono</Label>
+                <Input
+                  value={empresaForm.telefono}
+                  onChange={(e) => setEmpresaForm({...empresaForm, telefono: e.target.value})}
+                  placeholder="Ej: +54 11 1234-5678"
+                />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={empresaForm.email}
+                  onChange={(e) => setEmpresaForm({...empresaForm, email: e.target.value})}
+                  placeholder="Ej: contacto@miempresa.com"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" onClick={() => setShowNewEmpresa(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button onClick={createEmpresa} className="flex-1">
+                  Crear Empresa
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showEditEmpresa} onOpenChange={setShowEditEmpresa}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Editar Empresa
+              </DialogTitle>
+              <DialogDescription>Modifica los datos de {editingEmpresa?.nombre}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Nombre de la Empresa *</Label>
+                <Input
+                  value={empresaForm.nombre}
+                  onChange={(e) => setEmpresaForm({...empresaForm, nombre: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>RUT/CUIT</Label>
+                <Input
+                  value={empresaForm.rut_cuit}
+                  onChange={(e) => setEmpresaForm({...empresaForm, rut_cuit: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Dirección</Label>
+                <Input
+                  value={empresaForm.direccion}
+                  onChange={(e) => setEmpresaForm({...empresaForm, direccion: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Teléfono</Label>
+                <Input
+                  value={empresaForm.telefono}
+                  onChange={(e) => setEmpresaForm({...empresaForm, telefono: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input
+                  value={empresaForm.email}
+                  onChange={(e) => setEmpresaForm({...empresaForm, email: e.target.value})}
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" onClick={() => setShowEditEmpresa(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button onClick={updateEmpresa} className="flex-1">
+                  Actualizar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showDeleteEmpresa} onOpenChange={setShowDeleteEmpresa}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                Confirmar Eliminación
+              </DialogTitle>
+              <DialogDescription>
+                ¿Eliminar empresa <strong>{deletingItem?.nombre}</strong>?
+                <br /><br />
+                <span className="text-red-600 font-semibold">⚠️ ADVERTENCIA:</span>
+                <br />
+                • Se eliminará la empresa y todos sus datos
+                <br />
+                • Se eliminarán todas las facturas asociadas
+                <br />
+                • Esta acción NO se puede deshacer
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-3 pt-4">
+              <Button variant="outline" onClick={() => setShowDeleteEmpresa(false)} className="flex-1">
+                Cancelar
+              </Button>
+              <Button onClick={deleteEmpresa} className="flex-1 bg-red-600 hover:bg-red-700">
+                Eliminar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Toaster />
       </div>
     );
   }
 
-  // Vista detalle de empresa (aplicación original adaptada)
+  // Render empresa detail view
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header con información de empresa */}
         <div className="mb-8 flex items-center justify-between">
           <div>
             <Button variant="outline" onClick={backToEmpresas} className="mb-4">
               ← Volver a Empresas
             </Button>
-            <h1 className="text-4xl font-bold text-slate-800 mb-2">
-              {selectedEmpresa?.nombre}
-            </h1>
-            <p className="text-slate-600 text-lg">
-              Gestión de Cuentas por Pagar
-            </p>
-            {selectedEmpresa?.rut_cuit && (
-              <p className="text-slate-500">RUT/CUIT: {selectedEmpresa.rut_cuit}</p>
-            )}
+            <h1 className="text-4xl font-bold text-slate-800 mb-2">{empresa?.nombre}</h1>
+            <p className="text-slate-600 text-lg">Gestión de Cuentas por Pagar</p>
+            {empresa?.rut_cuit && <p className="text-slate-500">RUT/CUIT: {empresa.rut_cuit}</p>}
           </div>
         </div>
 
@@ -852,7 +610,6 @@ function App() {
             <TabsTrigger value="resumen">Resumen</TabsTrigger>
           </TabsList>
 
-          {/* Tab: Subir PDF */}
           <TabsContent value="upload">
             <Card className="max-w-2xl mx-auto">
               <CardHeader className="text-center">
@@ -860,12 +617,10 @@ function App() {
                   <Upload className="h-6 w-6" />
                   Subir Factura PDF
                 </CardTitle>
-                <CardDescription>
-                  Selecciona un archivo PDF de factura para extraer automáticamente los datos
-                </CardDescription>
+                <CardDescription>Selecciona un PDF para extraer datos automáticamente</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-slate-400 transition-colors">
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center">
                   <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                   <Input
                     id="pdf-upload"
@@ -876,13 +631,12 @@ function App() {
                   />
                   {selectedFile && (
                     <p className="text-sm text-slate-600 mb-4">
-                      Archivo seleccionado: {selectedFile.name}
+                      Archivo: {selectedFile.name}
                     </p>
                   )}
                 </div>
-                
                 <Button 
-                  onClick={handleUpload} 
+                  onClick={uploadPDF} 
                   disabled={!selectedFile || uploading}
                   className="w-full"
                   size="lg"
@@ -893,9 +647,8 @@ function App() {
             </Card>
           </TabsContent>
 
-          {/* Tab: Dashboard */}
           <TabsContent value="dashboard">
-            {resumenGeneral && (
+            {resumen && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -904,51 +657,41 @@ function App() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-orange-600">
-                      {formatCurrency(resumenGeneral.total_deuda_global)}
+                      {formatCurrency(resumen.total_deuda_global)}
                     </div>
                   </CardContent>
                 </Card>
-
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Facturas</CardTitle>
                     <FileText className="h-4 w-4 text-blue-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-blue-600">
-                      {resumenGeneral.total_facturas}
-                    </div>
+                    <div className="text-2xl font-bold text-blue-600">{resumen.total_facturas}</div>
                   </CardContent>
                 </Card>
-
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
                     <Clock className="h-4 w-4 text-red-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-red-600">
-                      {resumenGeneral.facturas_pendientes}
-                    </div>
+                    <div className="text-2xl font-bold text-red-600">{resumen.facturas_pendientes}</div>
                   </CardContent>
                 </Card>
-
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Pagadas</CardTitle>
                     <CheckCircle className="h-4 w-4 text-green-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-green-600">
-                      {resumenGeneral.facturas_pagadas}
-                    </div>
+                    <div className="text-2xl font-bold text-green-600">{resumen.facturas_pagadas}</div>
                   </CardContent>
                 </Card>
               </div>
             )}
 
-            {/* Resumen por Proveedor */}
-            {resumenGeneral && resumenGeneral.proveedores.length > 0 && (
+            {resumen && resumen.proveedores.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -962,28 +705,22 @@ function App() {
                       <TableRow>
                         <TableHead>Proveedor</TableHead>
                         <TableHead>Deuda Pendiente</TableHead>
-                        <TableHead>Facturas Pendientes</TableHead>
-                        <TableHead>Facturas Pagadas</TableHead>
+                        <TableHead>Pendientes</TableHead>
+                        <TableHead>Pagadas</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {resumenGeneral.proveedores.map((proveedor, index) => (
-                        <TableRow key={`dashboard-proveedor-${proveedor.proveedor}-${index}`}>
-                          <TableCell className="font-medium">
-                            {proveedor.proveedor}
-                          </TableCell>
+                      {resumen.proveedores.map((prov, idx) => (
+                        <TableRow key={`prov-${idx}`}>
+                          <TableCell className="font-medium">{prov.proveedor}</TableCell>
                           <TableCell className="font-semibold text-orange-600">
-                            {formatCurrency(proveedor.total_deuda)}
+                            {formatCurrency(prov.total_deuda)}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="destructive">
-                              {proveedor.facturas_pendientes}
-                            </Badge>
+                            <Badge variant="destructive">{prov.facturas_pendientes}</Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="secondary">
-                              {proveedor.facturas_pagadas}
-                            </Badge>
+                            <Badge variant="secondary">{prov.facturas_pagadas}</Badge>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -994,192 +731,12 @@ function App() {
             )}
           </TabsContent>
 
-          {/* Tab: Facturas Pagadas */}
-          <TabsContent value="pagadas">
-            <div className="space-y-6">
-              {/* Resumen de Facturas Pagadas */}
-              {estadoCuentaPagadas && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Total Pagado</CardTitle>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-green-600">
-                        {formatCurrency(estadoCuentaPagadas.total_pagado)}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Facturas Pagadas</CardTitle>
-                      <FileText className="h-4 w-4 text-blue-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-blue-600">
-                        {estadoCuentaPagadas.cantidad_facturas_pagadas}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Proveedores</CardTitle>
-                      <Users className="h-4 w-4 text-purple-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-purple-600">
-                        {estadoCuentaPagadas.facturas_por_proveedor.length}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {/* Resumen por Proveedor - Facturas Pagadas */}
-              {estadoCuentaPagadas && estadoCuentaPagadas.facturas_por_proveedor.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Pagos por Proveedor
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Proveedor</TableHead>
-                          <TableHead>Total Pagado</TableHead>
-                          <TableHead>Facturas Pagadas</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {estadoCuentaPagadas.facturas_por_proveedor.map((proveedor, index) => (
-                          <TableRow key={`pagadas-proveedor-${proveedor.proveedor}-${index}`}>
-                            <TableCell className="font-medium">
-                              {proveedor.proveedor}
-                            </TableCell>
-                            <TableCell className="font-semibold text-green-600">
-                              {formatCurrency(proveedor.total_deuda)}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">
-                                {proveedor.facturas_pagadas}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Lista Detallada de Facturas Pagadas */}
-              {estadoCuentaPagadas && estadoCuentaPagadas.facturas_pagadas.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5" />
-                        Detalle de Facturas Pagadas
-                      </CardTitle>
-                      <Button 
-                        onClick={exportFacturasPagadas}
-                        variant="outline"
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        <FileSpreadsheet className="h-4 w-4 mr-2" />
-                        Exportar a Excel
-                      </Button>
-                    </div>
-                    <CardDescription>
-                      Historial completo de todas las facturas marcadas como pagadas
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nº Factura</TableHead>
-                          <TableHead>Nº Contrato</TableHead>
-                          <TableHead>Proveedor</TableHead>
-                          <TableHead>Fecha Factura</TableHead>
-                          <TableHead>Monto Pagado</TableHead>
-                          <TableHead>Archivo</TableHead>
-                          <TableHead>Acciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {estadoCuentaPagadas.facturas_pagadas.map((factura) => (
-                          <TableRow key={`factura-pagada-${factura.id}`}>
-                            <TableCell className="font-medium">
-                              {factura.numero_factura}
-                            </TableCell>
-                            <TableCell>
-                              {factura.numero_contrato || "N/A"}
-                            </TableCell>
-                            <TableCell>{factura.nombre_proveedor}</TableCell>
-                            <TableCell>{formatDate(factura.fecha_factura)}</TableCell>
-                            <TableCell className="font-semibold text-green-600">
-                              {formatCurrency(factura.monto)}
-                            </TableCell>
-                            <TableCell className="text-sm text-slate-600">
-                              {factura.archivo_original || factura.archivo_pdf || "N/A"}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                {factura.archivo_pdf && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => downloadInvoicePDF(factura.id, factura.numero_factura)}
-                                    className="text-blue-600 hover:text-blue-700"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Mensaje cuando no hay facturas pagadas */}
-              {estadoCuentaPagadas && estadoCuentaPagadas.facturas_pagadas.length === 0 && (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <CheckCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-600 mb-2">
-                      No hay facturas pagadas
-                    </h3>
-                    <p className="text-slate-500">
-                      Las facturas marcadas como pagadas aparecerán aquí
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
-
-          {/* Tab: Facturas */}
           <TabsContent value="facturas">
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Lista de Facturas</CardTitle>
-                  <Button 
-                    onClick={exportFacturasPendientes}
-                    variant="outline"
-                    className="text-green-600 hover:text-green-700"
-                  >
+                  <Button onClick={exportPendientes} variant="outline" className="text-green-600">
                     <FileSpreadsheet className="h-4 w-4 mr-2" />
                     Exportar a Excel
                   </Button>
@@ -1190,14 +747,13 @@ function App() {
                       <SelectValue placeholder="Filtrar por estado" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="todos">Todos los estados</SelectItem>
+                      <SelectItem value="todos">Todos</SelectItem>
                       <SelectItem value="pendiente">Pendientes</SelectItem>
                       <SelectItem value="pagado">Pagadas</SelectItem>
                     </SelectContent>
                   </Select>
-                  
                   <Input
-                    placeholder="Buscar por proveedor..."
+                    placeholder="Buscar proveedor..."
                     value={filterProveedor}
                     onChange={(e) => setFilterProveedor(e.target.value)}
                     className="w-64"
@@ -1218,40 +774,34 @@ function App() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredInvoices.map((invoice) => (
-                      <TableRow key={`invoice-${invoice.id}`}>
-                        <TableCell className="font-medium">
-                          {invoice.numero_factura}
-                        </TableCell>
+                    {filteredInvoices.map((inv) => (
+                      <TableRow key={`inv-${inv.id}`}>
+                        <TableCell className="font-medium">{inv.numero_factura}</TableCell>
                         <TableCell>
-                          {invoice.numero_contrato || "N/A"}
+                          {inv.numero_contrato || "N/A"}
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => openContractDialog(invoice)}
-                            className="ml-2 h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                            onClick={() => openContractEdit(inv)}
+                            className="ml-2 h-6 w-6 p-0 text-blue-600"
                           >
                             <Edit3 className="h-3 w-3" />
                           </Button>
                         </TableCell>
-                        <TableCell>{invoice.nombre_proveedor}</TableCell>
-                        <TableCell>{formatDate(invoice.fecha_factura)}</TableCell>
-                        <TableCell className="font-semibold">
-                          {formatCurrency(invoice.monto)}
-                        </TableCell>
+                        <TableCell>{inv.nombre_proveedor}</TableCell>
+                        <TableCell>{formatDate(inv.fecha_factura)}</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(inv.monto)}</TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={invoice.estado_pago === "pagado" ? "secondary" : "destructive"}
-                          >
-                            {invoice.estado_pago}
+                          <Badge variant={inv.estado_pago === "pagado" ? "secondary" : "destructive"}>
+                            {inv.estado_pago}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            {invoice.estado_pago === "pendiente" ? (
+                            {inv.estado_pago === "pendiente" ? (
                               <Button
                                 size="sm"
-                                onClick={() => updateInvoiceStatus(invoice.id, "pagado")}
+                                onClick={() => updateInvoiceStatus(inv.id, "pagado")}
                                 className="bg-green-600 hover:bg-green-700"
                               >
                                 Marcar Pagado
@@ -1260,28 +810,26 @@ function App() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => updateInvoiceStatus(invoice.id, "pendiente")}
+                                onClick={() => updateInvoiceStatus(inv.id, "pendiente")}
                               >
                                 Marcar Pendiente
                               </Button>
                             )}
-                            
-                            {invoice.archivo_pdf && (
+                            {inv.archivo_pdf && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => downloadInvoicePDF(invoice.id, invoice.numero_factura)}
-                                className="text-blue-600 hover:text-blue-700"
+                                onClick={() => downloadPDF(inv.id, inv.numero_factura)}
+                                className="text-blue-600"
                               >
                                 <Download className="h-4 w-4" />
                               </Button>
                             )}
-                            
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => confirmDeleteInvoice(invoice)}
-                              className="text-red-600 hover:text-red-700"
+                              onClick={() => openDeleteInvoice(inv)}
+                              className="text-red-600"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1291,29 +839,135 @@ function App() {
                     ))}
                   </TableBody>
                 </Table>
-                
                 {filteredInvoices.length === 0 && (
                   <div className="text-center py-8 text-slate-500">
-                    No se encontraron facturas con los filtros aplicados
+                    No se encontraron facturas
                   </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Tab: Resumen */}
+          <TabsContent value="pagadas">
+            <div className="space-y-6">
+              {estadoPagadas && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Pagado</CardTitle>
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold text-green-600">
+                          {formatCurrency(estadoPagadas.total_pagado)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Facturas Pagadas</CardTitle>
+                        <FileText className="h-4 w-4 text-blue-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {estadoPagadas.cantidad_facturas_pagadas}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Proveedores</CardTitle>
+                        <Users className="h-4 w-4 text-purple-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold text-purple-600">
+                          {estadoPagadas.facturas_por_proveedor.length}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {estadoPagadas.facturas_pagadas.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="flex items-center gap-2">
+                            <CheckCircle className="h-5 w-5" />
+                            Detalle de Facturas Pagadas
+                          </CardTitle>
+                          <Button onClick={exportPagadas} variant="outline" className="text-green-600">
+                            <FileSpreadsheet className="h-4 w-4 mr-2" />
+                            Exportar a Excel
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Nº Factura</TableHead>
+                              <TableHead>Nº Contrato</TableHead>
+                              <TableHead>Proveedor</TableHead>
+                              <TableHead>Fecha</TableHead>
+                              <TableHead>Monto</TableHead>
+                              <TableHead>Archivo</TableHead>
+                              <TableHead>Acciones</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {estadoPagadas.facturas_pagadas.map((fac) => (
+                              <TableRow key={`paid-${fac.id}`}>
+                                <TableCell className="font-medium">{fac.numero_factura}</TableCell>
+                                <TableCell>{fac.numero_contrato || "N/A"}</TableCell>
+                                <TableCell>{fac.nombre_proveedor}</TableCell>
+                                <TableCell>{formatDate(fac.fecha_factura)}</TableCell>
+                                <TableCell className="font-semibold text-green-600">
+                                  {formatCurrency(fac.monto)}
+                                </TableCell>
+                                <TableCell>{fac.archivo_original || fac.archivo_pdf || "N/A"}</TableCell>
+                                <TableCell>
+                                  {fac.archivo_pdf && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => downloadPDF(fac.id, fac.numero_factura)}
+                                      className="text-blue-600"
+                                    >
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {estadoPagadas.facturas_pagadas.length === 0 && (
+                    <Card>
+                      <CardContent className="text-center py-8">
+                        <CheckCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-slate-600 mb-2">No hay facturas pagadas</h3>
+                        <p className="text-slate-500">Las facturas pagadas aparecerán aquí</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+            </div>
+          </TabsContent>
+
           <TabsContent value="resumen">
-            {resumenGeneral && (
+            {resumen && (
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <CardTitle>Resumen Financiero General</CardTitle>
-                      <Button 
-                        onClick={exportResumenGeneral}
-                        variant="outline"
-                        className="text-green-600 hover:text-green-700"
-                      >
+                      <Button onClick={exportResumen} variant="outline" className="text-green-600">
                         <FileSpreadsheet className="h-4 w-4 mr-2" />
                         Exportar a Excel
                       </Button>
@@ -1324,57 +978,45 @@ function App() {
                       <div className="space-y-2">
                         <p className="text-sm text-slate-600">Deuda Total Pendiente</p>
                         <p className="text-3xl font-bold text-orange-600">
-                          {formatCurrency(resumenGeneral.total_deuda_global)}
+                          {formatCurrency(resumen.total_deuda_global)}
                         </p>
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm text-slate-600">Total de Facturas</p>
-                        <p className="text-3xl font-bold text-slate-800">
-                          {resumenGeneral.total_facturas}
-                        </p>
+                        <p className="text-3xl font-bold text-slate-800">{resumen.total_facturas}</p>
                       </div>
                     </div>
-                    
                     <div className="grid grid-cols-2 gap-6 pt-4 border-t">
                       <div className="space-y-2">
                         <p className="text-sm text-slate-600">Facturas Pendientes</p>
-                        <p className="text-2xl font-semibold text-red-600">
-                          {resumenGeneral.facturas_pendientes}
-                        </p>
+                        <p className="text-2xl font-semibold text-red-600">{resumen.facturas_pendientes}</p>
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm text-slate-600">Facturas Pagadas</p>
-                        <p className="text-2xl font-semibold text-green-600">
-                          {resumenGeneral.facturas_pagadas}
-                        </p>
+                        <p className="text-2xl font-semibold text-green-600">{resumen.facturas_pagadas}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {resumenGeneral.proveedores.length > 0 && (
+                {resumen.proveedores.length > 0 && (
                   <Card>
                     <CardHeader>
                       <CardTitle>Detalle por Proveedor</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {resumenGeneral.proveedores.map((proveedor, index) => (
-                          <div 
-                            key={`resumen-proveedor-${proveedor.proveedor}-${index}`}
-                            className="flex justify-between items-center p-4 border rounded-lg"
-                          >
+                        {resumen.proveedores.map((prov, idx) => (
+                          <div key={`detail-${idx}`} className="flex justify-between items-center p-4 border rounded-lg">
                             <div>
-                              <h3 className="font-semibold text-slate-800">
-                                {proveedor.proveedor}
-                              </h3>
+                              <h3 className="font-semibold text-slate-800">{prov.proveedor}</h3>
                               <p className="text-sm text-slate-600">
-                                {proveedor.facturas_pendientes} pendientes, {proveedor.facturas_pagadas} pagadas
+                                {prov.facturas_pendientes} pendientes, {prov.facturas_pagadas} pagadas
                               </p>
                             </div>
                             <div className="text-right">
                               <p className="text-xl font-bold text-orange-600">
-                                {formatCurrency(proveedor.total_deuda)}
+                                {formatCurrency(prov.total_deuda)}
                               </p>
                               <p className="text-sm text-slate-600">deuda pendiente</p>
                             </div>
@@ -1389,9 +1031,9 @@ function App() {
           </TabsContent>
         </Tabs>
       </div>
-      
-      {/* Dialog para editar número de contrato */}
-      <Dialog open={showContractDialog} onOpenChange={setShowContractDialog}>
+
+      {/* Dialogs */}
+      <Dialog open={showContractEdit} onOpenChange={setShowContractEdit}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1399,190 +1041,43 @@ function App() {
               Editar Número de Contrato
             </DialogTitle>
             <DialogDescription>
-              Actualiza el número de contrato para la factura{" "}
-              <strong>{invoiceToEditContract?.numero_factura}</strong> del proveedor{" "}
-              <strong>{invoiceToEditContract?.nombre_proveedor}</strong>
+              Factura <strong>{editingInvoice?.numero_factura}</strong> de <strong>{editingInvoice?.nombre_proveedor}</strong>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="contract_number">Número de Contrato</Label>
+              <Label>Número de Contrato</Label>
               <Input
-                id="contract_number"
-                value={contractNumber}
-                onChange={(e) => setContractNumber(e.target.value)}
-                placeholder="Ej: CT-2024-001, OC-12345, etc."
+                value={contractForm}
+                onChange={(e) => setContractForm(e.target.value)}
+                placeholder="Ej: CT-2024-001"
               />
-              <p className="text-sm text-slate-500 mt-1">
-                Deja vacío si no tiene número de contrato asignado
-              </p>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowContractDialog(false)} 
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={updateContractNumber} 
-                className="flex-1"
-              >
-                Actualizar Contrato
-              </Button>
+              <Button variant="outline" onClick={closeDialogs} className="flex-1">Cancelar</Button>
+              <Button onClick={updateContract} className="flex-1">Actualizar</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de confirmación para eliminar factura */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <Dialog open={showDeleteInvoice} onOpenChange={setShowDeleteInvoice}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar Eliminación</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro que deseas eliminar la factura{" "}
-              <strong>{invoiceToDelete?.numero_factura}</strong> del proveedor{" "}
-              <strong>{invoiceToDelete?.nombre_proveedor}</strong>?
-              <br />
-              <br />
-              Esta acción no se puede deshacer y también eliminará el archivo PDF asociado.
+              ¿Eliminar factura <strong>{deletingItem?.numero_factura}</strong> de <strong>{deletingItem?.nombre_proveedor}</strong>?
+              <br /><br />
+              Esta acción eliminará también el archivo PDF asociado.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 pt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteDialog(false)} 
-              className="flex-1"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={deleteInvoice} 
-              className="flex-1 bg-red-600 hover:bg-red-700"
-            >
-              Eliminar Factura
-            </Button>
+            <Button variant="outline" onClick={closeDialogs} className="flex-1">Cancelar</Button>
+            <Button onClick={deleteInvoice} className="flex-1 bg-red-600 hover:bg-red-700">Eliminar</Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para editar empresa */}
-      <Dialog open={showEditEmpresaDialog} onOpenChange={setShowEditEmpresaDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Editar Empresa
-            </DialogTitle>
-            <DialogDescription>
-              Modifica los datos de la empresa {empresaToEdit?.nombre}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit_nombre">Nombre de la Empresa *</Label>
-              <Input
-                id="edit_nombre"
-                value={editEmpresaData.nombre}
-                onChange={(e) => setEditEmpresaData({...editEmpresaData, nombre: e.target.value})}
-                placeholder="Ej: Mi Empresa S.A."
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit_rut_cuit">RUT/CUIT</Label>
-              <Input
-                id="edit_rut_cuit"
-                value={editEmpresaData.rut_cuit}
-                onChange={(e) => setEditEmpresaData({...editEmpresaData, rut_cuit: e.target.value})}
-                placeholder="Ej: 20-12345678-9"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit_direccion">Dirección</Label>
-              <Input
-                id="edit_direccion"
-                value={editEmpresaData.direccion}
-                onChange={(e) => setEditEmpresaData({...editEmpresaData, direccion: e.target.value})}
-                placeholder="Ej: Av. Principal 123"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit_telefono">Teléfono</Label>
-              <Input
-                id="edit_telefono"
-                value={editEmpresaData.telefono}
-                onChange={(e) => setEditEmpresaData({...editEmpresaData, telefono: e.target.value})}
-                placeholder="Ej: +54 11 1234-5678"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit_email">Email</Label>
-              <Input
-                id="edit_email"
-                type="email"
-                value={editEmpresaData.email}
-                onChange={(e) => setEditEmpresaData({...editEmpresaData, email: e.target.value})}
-                placeholder="Ej: contacto@miempresa.com"
-              />
-            </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowEditEmpresaDialog(false)} className="flex-1">
-                Cancelar
-              </Button>
-              <Button onClick={updateEmpresa} className="flex-1">
-                Actualizar Empresa
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog de confirmación para eliminar empresa */}
-      <Dialog open={showDeleteEmpresaDialog} onOpenChange={setShowDeleteEmpresaDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              Confirmar Eliminación de Empresa
-            </DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro que deseas eliminar la empresa{" "}
-              <strong>{empresaToDelete?.nombre}</strong>?
-              <br />
-              <br />
-              <span className="text-red-600 font-semibold">
-                ⚠️ ADVERTENCIA: Esta acción eliminará permanentemente:
-              </span>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>La empresa y todos sus datos</li>
-                <li>Todas las facturas asociadas</li>
-                <li>Todos los archivos PDF almacenados</li>
-                <li>Todos los reportes y resúmenes</li>
-              </ul>
-              <br />
-              <strong>Esta acción NO se puede deshacer.</strong>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex gap-3 pt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteEmpresaDialog(false)} 
-              className="flex-1"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={deleteEmpresa} 
-              className="flex-1 bg-red-600 hover:bg-red-700"
-            >
-              Eliminar Empresa
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
       <Toaster />
     </div>
   );
