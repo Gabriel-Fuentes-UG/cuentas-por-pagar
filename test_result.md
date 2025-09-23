@@ -207,6 +207,12 @@ frontend:
       - working: true
         agent: "testing"
         comment: "VERIFIED: Comprehensive testing completed. Multiple export button clicks tested across all tabs (Facturas, Resumen, Facturas Pagadas). Zero removeChild errors detected. The useDownload hook with timeout-based cleanup works perfectly. DOM manipulation issues completely resolved."
+      - working: false
+        agent: "user"
+        comment: "CRITICAL: User still reports removeChild error persisting despite App.js rewrite. Error coming from React fiber reconciliation, not application code."
+      - working: true
+        agent: "main"
+        comment: "ROOT CAUSE IDENTIFIED: React 19.0.0 version incompatibility with dependencies expecting React 16-18. Fixed by downgrading to React 18.3.1. Intensive testing confirms zero removeChild errors."
 
   - task: "File download functionality"
     implemented: true
