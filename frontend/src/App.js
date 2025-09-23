@@ -118,16 +118,16 @@ function App() {
     email: ""
   });
   
-  // Refs para control de montaje
-  const isMountedRef = useRef(true);
+  // Refs para control de montaje - Simplificado
+  const mountedRef = useRef(true);
   
   const { toast } = useToast();
 
-  // Cleanup al desmontar
+  // Cleanup al desmontar - Simplificado
   useEffect(() => {
-    isMountedRef.current = true;
+    mountedRef.current = true;
     return () => {
-      isMountedRef.current = false;
+      mountedRef.current = false;
     };
   }, []);
 
