@@ -237,14 +237,16 @@ function App() {
 
   // ===== FUNCIONES DE FACTURAS (cuando hay empresa seleccionada) =====
   const fetchInvoices = useCallback(async () => {
-    if (!selectedEmpresa || !isMounted) return;
+    if (!selectedEmpresa || !isMountedRef.current) return;
     
     try {
       const response = await axios.get(`${API}/invoices/${selectedEmpresa.id}`);
-      safeSetState(setInvoices, response.data);
+      if (isMountedRef.current) {
+        setInvoices(response.data);
+      }
     } catch (error) {
       console.error("Error fetching invoices:", error);
-      if (isMounted) {
+      if (isMountedRef.current) {
         toast({
           title: "Error",
           description: "No se pudieron cargar las facturas",
@@ -252,29 +254,33 @@ function App() {
         });
       }
     }
-  }, [selectedEmpresa, safeSetState, isMounted, toast]);
+  }, [selectedEmpresa, toast]);
 
   const fetchResumenGeneral = useCallback(async () => {
-    if (!selectedEmpresa || !isMounted) return;
+    if (!selectedEmpresa || !isMountedRef.current) return;
     
     try {
       const response = await axios.get(`${API}/resumen/general/${selectedEmpresa.id}`);
-      safeSetState(setResumenGeneral, response.data);
+      if (isMountedRef.current) {
+        setResumenGeneral(response.data);
+      }
     } catch (error) {
       console.error("Error fetching resumen:", error);
     }
-  }, [selectedEmpresa, safeSetState, isMounted]);
+  }, [selectedEmpresa]);
 
   const fetchEstadoCuentaPagadas = useCallback(async () => {
-    if (!selectedEmpresa || !isMounted) return;
+    if (!selectedEmpresa || !isMountedRef.current) return;
     
     try {
       const response = await axios.get(`${API}/estado-cuenta/pagadas/${selectedEmpresa.id}`);
-      safeSetState(setEstadoCuentaPagadas, response.data);
+      if (isMountedRef.current) {
+        setEstadoCuentaPagadas(response.data);
+      }
     } catch (error) {
       console.error("Error fetching estado cuenta pagadas:", error);
     }
-  }, [selectedEmpresa, safeSetState, isMounted]);
+  }, [selectedEmpresa]);
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
