@@ -167,10 +167,12 @@ function App() {
   const fetchEmpresas = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/empresas`);
-      safeSetState(setEmpresas, response.data);
+      if (isMountedRef.current) {
+        setEmpresas(response.data);
+      }
     } catch (error) {
       console.error("Error fetching empresas:", error);
-      if (isMounted) {
+      if (isMountedRef.current) {
         toast({
           title: "Error",
           description: "No se pudieron cargar las empresas",
@@ -178,7 +180,7 @@ function App() {
         });
       }
     }
-  }, [safeSetState, isMounted, toast]);
+  }, [toast]);
 
   const createEmpresa = async () => {
     if (!newEmpresa.nombre.trim()) {
