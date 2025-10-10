@@ -4,6 +4,40 @@ import { X } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 
+// Error Boundary for Dialog Portal errors
+class DialogErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render will show the fallback UI
+    if (error.message && error.message.includes('removeChild')) {
+      console.warn('Dialog portal removeChild error caught and handled safely:', error);
+      return { hasError: true };
+    }
+    throw error; // Re-throw other errors
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Log the error for debugging
+    if (error.message && error.message.includes('removeChild')) {
+      console.warn('Dialog portal error details:', error, errorInfo);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Reset error state after a short delay
+      setTimeout(() => this.setState({ hasError: false }), 100);
+      return null; // Don't render anything if there's a portal error
+    }
+
+    return this.props.children;
+  }
+}
+
 const Dialog = DialogPrimitive.Root
 
 const DialogTrigger = DialogPrimitive.Trigger
