@@ -297,9 +297,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "PDF upload and processing with Gemini AI"
-  stuck_tasks:
-    - "PDF upload and processing with Gemini AI"
+    - "Fix persistent removeChild DOM error"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
