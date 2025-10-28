@@ -189,6 +189,18 @@ backend:
         agent: "testing"
         comment: "Minor: Error handling inconsistent. Some endpoints return 500 instead of 404 for non-existent resources (e.g., updating non-existent invoice returns 500 with '404: Factura no encontrada' message instead of proper 404 status). Core functionality works but error responses need standardization."
 
+  - task: "Payment receipt upload functionality (comprobante de pago)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETED: New comprobante (payment receipt) functionality fully tested and working perfectly. ALL SUCCESS CRITERIA MET: ✅ POST /api/invoices/{invoice_id}/upload-comprobante endpoint working - successfully uploads PDF files with unique filename generation ✅ GET /api/invoices/{invoice_id}/download-comprobante endpoint working - returns proper PDF files with correct headers ✅ Invoice model updated with comprobante_pago and comprobante_original fields - all invoices now include these fields in API responses ✅ File management working - comprobantes stored in /app/uploads/ with unique filenames (comprobante_{uuid}_{original_name}.pdf) ✅ File cleanup on deletion working - DELETE /api/invoices/{invoice_id} properly removes both invoice PDF and comprobante files ✅ Error handling working - proper 404 responses for non-existent invoices on download, upload returns appropriate errors. End-to-end testing confirmed: upload → database update → download → file cleanup all functioning correctly. Payment receipt functionality is production-ready."
+
 frontend:
   - task: "Fix persistent removeChild DOM error"
     implemented: true
