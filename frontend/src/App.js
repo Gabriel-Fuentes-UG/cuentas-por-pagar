@@ -148,6 +148,10 @@ const CompanyManager = ({
   const [editingEmpresa, setEditingEmpresa] = useState(null);
   const [deletingEmpresa, setDeletingEmpresa] = useState(null);
 
+  // Password confirmation for deletions
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+
   const openNewEmpresa = () => {
     setEmpresaForm({ nombre: "", rut_cuit: "", direccion: "", telefono: "", email: "" });
     setShowNewEmpresa(true);
