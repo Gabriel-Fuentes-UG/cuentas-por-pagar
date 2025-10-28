@@ -592,6 +592,292 @@ class InvoiceAPITester:
             print("   ⚠️  No comprobante file to test cleanup (test still passes)")
             return True
 
+    def test_delete_comprobante(self):
+        """Test NEW DELETE comprobante functionality"""
+        if not self.created_invoice_id:
+            print("⚠️  Skipping delete comprobante test - no invoice ID available")
+            return True
+        
+        # First, verify the invoice has a comprobante (should have been uploaded in previous test)
+        success_get, invoice_data = self.run_test(
+            "Get Invoice to Check Comprobante Before Delete",
+            "GET",
+            f"invoices/{self.test_empresa_id}",
+            200
+        )
+        
+        if not success_get:
+            print("❌ Could not get invoice data for delete comprobante test")
+            return False
+        
+        # Find our test invoice
+        test_invoice = None
+        for inv in invoice_data:
+            if inv.get('id') == self.created_invoice_id:
+                test_invoice = inv
+                break
+        
+        if not test_invoice:
+            print("❌ Could not find test invoice for delete comprobante test")
+            return False
+        
+        comprobante_filename = test_invoice.get('comprobante_pago')
+        if not comprobante_filename:
+            print("⚠️  No comprobante found on invoice - skipping delete test")
+            return True
+        
+        comprobante_path = f"/app/uploads/{comprobante_filename}"
+        file_exists_before = os.path.exists(comprobante_path)
+        print(f"   📁 Comprobante file before deletion: {comprobante_path} (exists: {file_exists_before})")
+        
+        # Test DELETE comprobante endpoint
+        success, response_data = self.run_test(
+            "Delete Comprobante de Pago (NEW FUNCTIONALITY)",
+            "DELETE",
+            f"invoices/{self.created_invoice_id}/delete-comprobante",
+            200
+        )
+        
+        if success and response_data:
+            print(f"   ✅ Delete comprobante successful: {response_data.get('message', 'No message')}")
+            
+            # Verify file was actually deleted from filesystem
+            file_exists_after = os.path.exists(comprobante_path)
+            print(f"   📁 Comprobante file after deletion: exists={file_exists_after}")
+            
+            if file_exists_before and not file_exists_after:
+                print("   ✅ Comprobante file properly removed from server")
+            elif not file_exists_before:
+                print("   ⚠️  Comprobante file didn't exist before deletion")
+            else:
+                print("   ❌ Comprobante file was not removed from server")
+                return False
+            
+            # Verify database fields were cleared
+            success_verify, updated_invoice_data = self.run_test(
+                "Verify Comprobante Fields Cleared in Database",
+                "GET",
+                f"invoices/{self.test_empresa_id}",
+                200
+            )
+            
+            if success_verify:
+                # Find our invoice again
+                updated_invoice = None
+                for inv in updated_invoice_data:
+                    if inv.get('id') == self.created_invoice_id:
+                        updated_invoice = inv
+                        break
+                
+                if updated_invoice:
+                    comprobante_pago = updated_invoice.get('comprobante_pago')
+                    comprobante_original = updated_invoice.get('comprobante_original')
+                    
+                    if comprobante_pago is None and comprobante_original is None:
+                        print("   ✅ Comprobante fields properly cleared from database")
+                    else:
+                        print(f"   ❌ Comprobante fields not cleared: pago={comprobante_pago}, original={comprobante_original}")
+                        return False
+                    
+                    # Verify invoice itself is still intact
+                    if updated_invoice.get('numero_factura') and updated_invoice.get('nombre_proveedor'):
+                        print("   ✅ Invoice data remains intact after comprobante deletion")
+                    else:
+                        print("   ❌ Invoice data appears corrupted after comprobante deletion")
+                        return False
+                else:
+                    print("   ❌ Could not find invoice after comprobante deletion")
+                    return False
+            else:
+                print("   ❌ Could not verify database update after comprobante deletion")
+                return False
+        
+        return success
+
+    def test_delete_comprobante_error_cases(self):
+        """Test error handling for DELETE comprobante operations"""
+        # Test delete comprobante from non-existent invoice
+        success1, _ = self.run_test(
+            "Delete Comprobante from Non-existent Invoice",
+            "DELETE",
+            "invoices/non-existent-id/delete-comprobante",
+            404
+        )
+        
+        # Test delete comprobante from invoice without comprobante
+        # First create a new invoice without comprobante
+        test_file_path = self.create_test_pdf()
+        if test_file_path:
+            try:
+                with open(test_file_path, 'rb') as f:
+                    files = {'file': ('test_invoice_no_comprobante.pdf', f, 'application/pdf')}
+                    success_create, create_response = self.run_test(
+                        "Create Invoice for No-Comprobante Delete Test", 
+                        "POST", 
+                        f"upload-pdf/{self.test_empresa_id}", 
+                        200,
+                        files=files
+                    )
+                    
+                    if success_create and 'data' in create_response:
+                        no_comprobante_invoice_id = create_response['data'].get('id')
+                        
+                        # Try to delete comprobante from invoice that has none
+                        success2, _ = self.run_test(
+                            "Delete Comprobante from Invoice Without Comprobante",
+                            "DELETE",
+                            f"invoices/{no_comprobante_invoice_id}/delete-comprobante",
+                            404
+                        )
+                        
+                        # Clean up the test invoice
+                        self.run_test(
+                            "Cleanup No-Comprobante Test Invoice",
+                            "DELETE",
+                            f"invoices/{no_comprobante_invoice_id}",
+                            200
+                        )
+                    else:
+                        success2 = False
+            except Exception as e:
+                print(f"❌ Error in delete comprobante error case test: {e}")
+                success2 = False
+            finally:
+                if os.path.exists(test_file_path):
+                    os.unlink(test_file_path)
+        else:
+            success2 = False
+        
+        return success1 and success2
+
+    def test_comprobante_full_workflow(self):
+        """Test complete comprobante workflow: upload → verify → delete → verify deletion"""
+        if not self.created_invoice_id:
+            print("⚠️  Skipping full comprobante workflow test - no invoice ID available")
+            return True
+        
+        print("\n🔄 Testing Complete Comprobante Workflow...")
+        
+        # Step 1: Upload comprobante
+        comprobante_path = "/app/comprobante_test.pdf"
+        if not os.path.exists(comprobante_path):
+            print("❌ Test comprobante PDF not found for workflow test")
+            return False
+        
+        try:
+            with open(comprobante_path, 'rb') as f:
+                files = {'file': ('workflow_comprobante.pdf', f, 'application/pdf')}
+                success1, upload_response = self.run_test(
+                    "Workflow Step 1: Upload Comprobante",
+                    "POST",
+                    f"invoices/{self.created_invoice_id}/upload-comprobante",
+                    200,
+                    files=files
+                )
+                
+                if not success1:
+                    print("❌ Workflow failed at upload step")
+                    return False
+                
+                comprobante_filename = upload_response.get('comprobante_filename')
+                print(f"   ✅ Step 1 Complete: Uploaded {comprobante_filename}")
+        except Exception as e:
+            print(f"❌ Workflow upload step failed: {e}")
+            return False
+        
+        # Step 2: Verify upload (download)
+        success2, download_data = self.run_test(
+            "Workflow Step 2: Verify Upload (Download)",
+            "GET",
+            f"invoices/{self.created_invoice_id}/download-comprobante",
+            200,
+            response_type='binary'
+        )
+        
+        if not success2 or len(download_data) == 0:
+            print("❌ Workflow failed at verification step")
+            return False
+        
+        print(f"   ✅ Step 2 Complete: Verified download ({len(download_data)} bytes)")
+        
+        # Step 3: Delete comprobante
+        success3, delete_response = self.run_test(
+            "Workflow Step 3: Delete Comprobante",
+            "DELETE",
+            f"invoices/{self.created_invoice_id}/delete-comprobante",
+            200
+        )
+        
+        if not success3:
+            print("❌ Workflow failed at deletion step")
+            return False
+        
+        print(f"   ✅ Step 3 Complete: {delete_response.get('message', 'Deleted')}")
+        
+        # Step 4: Verify deletion (download should fail)
+        success4, _ = self.run_test(
+            "Workflow Step 4: Verify Deletion (Should Fail)",
+            "GET",
+            f"invoices/{self.created_invoice_id}/download-comprobante",
+            404,
+            response_type='binary'
+        )
+        
+        if not success4:
+            print("❌ Workflow failed at deletion verification step")
+            return False
+        
+        print("   ✅ Step 4 Complete: Download properly returns 404 after deletion")
+        
+        # Step 5: Verify invoice is still accessible
+        success5, invoice_data = self.run_test(
+            "Workflow Step 5: Verify Invoice Still Accessible",
+            "GET",
+            f"invoices/{self.test_empresa_id}",
+            200
+        )
+        
+        if success5:
+            # Find our invoice
+            test_invoice = None
+            for inv in invoice_data:
+                if inv.get('id') == self.created_invoice_id:
+                    test_invoice = inv
+                    break
+            
+            if test_invoice and test_invoice.get('numero_factura'):
+                print("   ✅ Step 5 Complete: Invoice remains accessible and intact")
+            else:
+                print("❌ Workflow failed: Invoice not found or corrupted after comprobante deletion")
+                return False
+        else:
+            print("❌ Workflow failed at final verification step")
+            return False
+        
+        # Step 6: Test re-upload after deletion
+        try:
+            with open(comprobante_path, 'rb') as f:
+                files = {'file': ('workflow_comprobante_reupload.pdf', f, 'application/pdf')}
+                success6, reupload_response = self.run_test(
+                    "Workflow Step 6: Re-upload After Deletion",
+                    "POST",
+                    f"invoices/{self.created_invoice_id}/upload-comprobante",
+                    200,
+                    files=files
+                )
+                
+                if success6:
+                    print("   ✅ Step 6 Complete: Re-upload after deletion successful")
+                else:
+                    print("❌ Workflow failed: Cannot re-upload comprobante after deletion")
+                    return False
+        except Exception as e:
+            print(f"❌ Workflow re-upload step failed: {e}")
+            return False
+        
+        print("🎉 Complete Comprobante Workflow Test: ALL STEPS PASSED")
+        return True
+
     def test_comprobante_error_cases(self):
         """Test error handling for comprobante operations"""
         # Test upload to non-existent invoice
