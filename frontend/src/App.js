@@ -972,6 +972,51 @@ const InvoiceManager = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Upload Comprobante Dialog */}
+      <Dialog open={showComprobanteUpload} onOpenChange={setShowComprobanteUpload}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Subir Comprobante de Pago
+            </DialogTitle>
+            <DialogDescription>
+              Factura <strong>{uploadingInvoice?.numero_factura}</strong> de <strong>{uploadingInvoice?.nombre_proveedor}</strong>
+              <br />
+              <strong>Monto: {uploadingInvoice && formatCurrency(uploadingInvoice.monto)}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Comprobante de Pago (PDF)</Label>
+              <Input
+                type="file"
+                accept=".pdf"
+                onChange={handleComprobanteFileSelect}
+                className="mt-2"
+              />
+              {comprobanteFile && (
+                <p className="text-sm text-slate-600 mt-2">
+                  Archivo: {comprobanteFile.name}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button variant="outline" onClick={() => setShowComprobanteUpload(false)} className="flex-1">
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleUploadComprobante} 
+                disabled={!comprobanteFile || uploadingComprobante}
+                className="flex-1"
+              >
+                {uploadingComprobante ? "Subiendo..." : "Subir Comprobante"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
