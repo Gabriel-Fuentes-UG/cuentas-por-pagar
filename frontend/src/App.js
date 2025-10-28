@@ -53,7 +53,6 @@ const useDownload = () => {
 const PasswordDialog = ({ isOpen, onClose, onConfirm, title, description }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { toast } = useToast();
 
   const handlePasswordSubmit = () => {
     if (password === 'MAURO') {
@@ -61,11 +60,6 @@ const PasswordDialog = ({ isOpen, onClose, onConfirm, title, description }) => {
       handleClose();
     } else {
       setError('Contraseña incorrecta');
-      toast({ 
-        title: "Error", 
-        description: "Contraseña incorrecta. Operación cancelada.", 
-        variant: "destructive" 
-      });
       handleClose();
     }
   };
@@ -78,6 +72,7 @@ const PasswordDialog = ({ isOpen, onClose, onConfirm, title, description }) => {
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       handlePasswordSubmit();
     }
   };
