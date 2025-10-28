@@ -922,7 +922,8 @@ class InvoiceAPITester:
 
     def test_xml_upload(self):
         """Test NEW XML upload functionality"""
-        if not self.created_invoice_id:
+        invoice_id = self.created_invoice_id or self.existing_invoice_id
+        if not invoice_id:
             print("⚠️  Skipping XML upload test - no invoice ID available")
             return True
         
