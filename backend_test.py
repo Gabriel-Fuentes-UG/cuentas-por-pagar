@@ -1050,7 +1050,7 @@ class InvoiceAPITester:
                     success, response_data = self.run_test(
                         "Upload Non-XML File (Should Fail)",
                         "POST",
-                        f"invoices/{self.created_invoice_id}/upload-xml",
+                        f"invoices/{invoice_id}/upload-xml",
                         400,  # Should return 400 Bad Request
                         files=files
                     )
