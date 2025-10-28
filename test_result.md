@@ -357,7 +357,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "XML upload and download functionality"
+    - "Edit provider name functionality"
+    - "Edit invoice number functionality"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
