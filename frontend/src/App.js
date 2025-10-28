@@ -353,6 +353,10 @@ const InvoiceManager = ({
   const [comprobanteFile, setComprobanteFile] = useState(null);
   const [uploadingInvoice, setUploadingInvoice] = useState(null);
 
+  // Delete comprobante
+  const [showDeleteComprobante, setShowDeleteComprobante] = useState(false);
+  const [deletingComprobante, setDeletingComprobante] = useState(null);
+
   const { toast } = useToast();
 
   // Filter invoices
