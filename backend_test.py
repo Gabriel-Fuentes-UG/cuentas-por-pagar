@@ -425,6 +425,207 @@ class InvoiceAPITester:
         
         return success_create and success_update and success_delete
 
+    def test_comprobante_upload(self):
+        """Test NEW comprobante upload functionality"""
+        if not self.created_invoice_id:
+            print("⚠️  Skipping comprobante upload test - no invoice ID available")
+            return True
+        
+        # Use the test comprobante PDF file
+        comprobante_path = "/app/comprobante_test.pdf"
+        
+        if not os.path.exists(comprobante_path):
+            print("❌ Test comprobante PDF not found at /app/comprobante_test.pdf")
+            return False
+        
+        try:
+            with open(comprobante_path, 'rb') as f:
+                files = {'file': ('comprobante_test.pdf', f, 'application/pdf')}
+                success, response_data = self.run_test(
+                    "Upload Comprobante de Pago (NEW FUNCTIONALITY)",
+                    "POST",
+                    f"invoices/{self.created_invoice_id}/upload-comprobante",
+                    200,
+                    files=files
+                )
+                
+                if success and response_data:
+                    print(f"   ✅ Comprobante upload successful")
+                    if 'comprobante_filename' in response_data:
+                        print(f"   ✅ Comprobante filename: {response_data['comprobante_filename']}")
+                        
+                        # Verify file was actually saved
+                        saved_file_path = f"/app/uploads/{response_data['comprobante_filename']}"
+                        if os.path.exists(saved_file_path):
+                            print(f"   ✅ Comprobante file saved to: {saved_file_path}")
+                            file_size = os.path.getsize(saved_file_path)
+                            print(f"   ✅ File size: {file_size} bytes")
+                        else:
+                            print(f"   ❌ Comprobante file not found at: {saved_file_path}")
+                            return False
+                    else:
+                        print("   ❌ No comprobante filename in response")
+                        return False
+                
+                return success
+        except Exception as e:
+            print(f"❌ Comprobante upload failed with error: {e}")
+            return False
+
+    def test_comprobante_download(self):
+        """Test NEW comprobante download functionality"""
+        if not self.created_invoice_id:
+            print("⚠️  Skipping comprobante download test - no invoice ID available")
+            return True
+        
+        success, response_data = self.run_test(
+            "Download Comprobante de Pago (NEW FUNCTIONALITY)",
+            "GET",
+            f"invoices/{self.created_invoice_id}/download-comprobante",
+            200,
+            response_type='binary'
+        )
+        
+        if success:
+            print(f"   ✅ Comprobante download successful, received {len(response_data)} bytes")
+            # Verify it has content
+            if len(response_data) > 0:
+                print("   ✅ Comprobante file has content")
+            else:
+                print("   ❌ Comprobante file is empty")
+                return False
+        
+        return success
+
+    def test_invoice_with_comprobante_fields(self):
+        """Test that invoice listing includes comprobante fields"""
+        success, response_data = self.run_test(
+            "Get Invoices with Comprobante Fields (NEW)",
+            "GET",
+            f"invoices/{self.test_empresa_id}",
+            200
+        )
+        
+        if success and response_data:
+            # Look for invoices with comprobante fields
+            invoices_with_comprobante = [inv for inv in response_data if inv.get('comprobante_pago')]
+            
+            if invoices_with_comprobante:
+                print(f"   ✅ Found {len(invoices_with_comprobante)} invoices with comprobante")
+                for inv in invoices_with_comprobante[:3]:  # Show first 3
+                    print(f"   ✅ Invoice {inv.get('numero_factura', 'N/A')}: comprobante_pago={inv.get('comprobante_pago', 'N/A')}")
+                    print(f"      comprobante_original={inv.get('comprobante_original', 'N/A')}")
+            else:
+                print("   ⚠️  No invoices found with comprobante fields (may be expected if no comprobantes uploaded)")
+            
+            # Verify all invoices have the comprobante fields (even if null)
+            all_have_fields = all('comprobante_pago' in inv and 'comprobante_original' in inv for inv in response_data)
+            if all_have_fields:
+                print("   ✅ All invoices include comprobante_pago and comprobante_original fields")
+            else:
+                print("   ❌ Some invoices missing comprobante fields")
+                return False
+        
+        return success
+
+    def test_comprobante_file_cleanup_on_deletion(self):
+        """Test that comprobante files are cleaned up when invoice is deleted"""
+        if not self.created_invoice_id:
+            print("⚠️  Skipping comprobante cleanup test - no invoice ID available")
+            return True
+        
+        # First, get the invoice to see if it has a comprobante
+        success_get, invoice_data = self.run_test(
+            "Get Invoice Before Deletion (for comprobante cleanup test)",
+            "GET",
+            f"invoices/{self.test_empresa_id}",
+            200
+        )
+        
+        if not success_get:
+            print("❌ Could not get invoice data for cleanup test")
+            return False
+        
+        # Find our test invoice
+        test_invoice = None
+        for inv in invoice_data:
+            if inv.get('id') == self.created_invoice_id:
+                test_invoice = inv
+                break
+        
+        if not test_invoice:
+            print("❌ Could not find test invoice for cleanup test")
+            return False
+        
+        comprobante_filename = test_invoice.get('comprobante_pago')
+        if comprobante_filename:
+            comprobante_path = f"/app/uploads/{comprobante_filename}"
+            file_exists_before = os.path.exists(comprobante_path)
+            print(f"   📁 Comprobante file before deletion: {comprobante_path} (exists: {file_exists_before})")
+            
+            # Delete the invoice
+            success_delete, _ = self.run_test(
+                "Delete Invoice with Comprobante (cleanup test)",
+                "DELETE",
+                f"invoices/{self.created_invoice_id}",
+                200
+            )
+            
+            if success_delete:
+                # Check if comprobante file was cleaned up
+                file_exists_after = os.path.exists(comprobante_path)
+                print(f"   📁 Comprobante file after deletion: exists={file_exists_after}")
+                
+                if file_exists_before and not file_exists_after:
+                    print("   ✅ Comprobante file properly cleaned up on invoice deletion")
+                    return True
+                elif not file_exists_before:
+                    print("   ⚠️  No comprobante file to clean up (test still passes)")
+                    return True
+                else:
+                    print("   ❌ Comprobante file was not cleaned up on invoice deletion")
+                    return False
+            else:
+                print("   ❌ Invoice deletion failed")
+                return False
+        else:
+            print("   ⚠️  No comprobante file to test cleanup (test still passes)")
+            return True
+
+    def test_comprobante_error_cases(self):
+        """Test error handling for comprobante operations"""
+        # Test upload to non-existent invoice
+        comprobante_path = "/app/comprobante_test.pdf"
+        
+        if os.path.exists(comprobante_path):
+            try:
+                with open(comprobante_path, 'rb') as f:
+                    files = {'file': ('comprobante_test.pdf', f, 'application/pdf')}
+                    success1, _ = self.run_test(
+                        "Upload Comprobante to Non-existent Invoice",
+                        "POST",
+                        "invoices/non-existent-id/upload-comprobante",
+                        404,
+                        files=files
+                    )
+            except Exception as e:
+                print(f"❌ Error testing comprobante upload to non-existent invoice: {e}")
+                success1 = False
+        else:
+            print("⚠️  Test comprobante file not found, skipping error case test")
+            success1 = True
+        
+        # Test download from non-existent invoice
+        success2, _ = self.run_test(
+            "Download Comprobante from Non-existent Invoice",
+            "GET",
+            "invoices/non-existent-id/download-comprobante",
+            404,
+            response_type='binary'
+        )
+        
+        return success1 and success2
+
     def test_invalid_endpoints(self):
         """Test error handling for invalid requests"""
         # Test non-existent invoice
