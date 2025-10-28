@@ -557,7 +557,7 @@ class InvoiceAPITester:
         # Find our test invoice
         test_invoice = None
         for inv in invoice_data:
-            if inv.get('id') == self.created_invoice_id:
+            if inv.get('id') == invoice_id:
                 test_invoice = inv
                 break
         
@@ -621,7 +621,7 @@ class InvoiceAPITester:
         # Find our test invoice
         test_invoice = None
         for inv in invoice_data:
-            if inv.get('id') == self.created_invoice_id:
+            if inv.get('id') == invoice_id:
                 test_invoice = inv
                 break
         
@@ -673,7 +673,7 @@ class InvoiceAPITester:
                 # Find our invoice again
                 updated_invoice = None
                 for inv in updated_invoice_data:
-                    if inv.get('id') == self.created_invoice_id:
+                    if inv.get('id') == invoice_id:
                         updated_invoice = inv
                         break
                 
@@ -849,7 +849,7 @@ class InvoiceAPITester:
             # Find our invoice
             test_invoice = None
             for inv in invoice_data:
-                if inv.get('id') == self.created_invoice_id:
+                if inv.get('id') == invoice_id:
                     test_invoice = inv
                     break
             
@@ -1147,7 +1147,7 @@ class InvoiceAPITester:
         # Find our test invoice
         test_invoice = None
         for inv in invoice_data:
-            if inv.get('id') == self.created_invoice_id:
+            if inv.get('id') == invoice_id:
                 test_invoice = inv
                 break
         
@@ -1252,7 +1252,7 @@ class InvoiceAPITester:
             # Find our invoice and check XML fields
             test_invoice = None
             for inv in invoice_data:
-                if inv.get('id') == self.created_invoice_id:
+                if inv.get('id') == invoice_id:
                     test_invoice = inv
                     break
             
