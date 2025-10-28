@@ -532,6 +532,12 @@ const InvoiceManager = ({
   const [showDeleteComprobante, setShowDeleteComprobante] = useState(false);
   const [deletingComprobante, setDeletingComprobante] = useState(null);
 
+  // Upload XML
+  const [showXmlUpload, setShowXmlUpload] = useState(false);
+  const [uploadingXml, setUploadingXml] = useState(false);
+  const [xmlFile, setXmlFile] = useState(null);
+  const [uploadingXmlInvoice, setUploadingXmlInvoice] = useState(null);
+
   // Password confirmation for all deletions
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
