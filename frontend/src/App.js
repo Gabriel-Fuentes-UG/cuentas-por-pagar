@@ -412,6 +412,17 @@ const CompanyManager = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      <PasswordDialog
+        isOpen={showPasswordDialog}
+        onClose={() => {
+          setShowPasswordDialog(false);
+          handlePasswordCancel();
+        }}
+        onConfirm={handlePasswordConfirm}
+        title="Eliminar Empresa"
+        description={`Se eliminará permanentemente la empresa "${deletingEmpresa?.nombre}" y todas sus facturas asociadas.`}
+      />
     </div>
   );
 };
