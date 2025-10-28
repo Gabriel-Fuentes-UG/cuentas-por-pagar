@@ -540,6 +540,16 @@ const InvoiceManager = ({
   const [xmlFile, setXmlFile] = useState(null);
   const [uploadingXmlInvoice, setUploadingXmlInvoice] = useState(null);
 
+  // Edit provider
+  const [showEditProvider, setShowEditProvider] = useState(false);
+  const [providerForm, setProviderForm] = useState("");
+  const [editingProviderInvoice, setEditingProviderInvoice] = useState(null);
+
+  // Edit invoice number
+  const [showEditInvoiceNumber, setShowEditInvoiceNumber] = useState(false);
+  const [invoiceNumberForm, setInvoiceNumberForm] = useState("");
+  const [editingNumberInvoice, setEditingNumberInvoice] = useState(null);
+
   // Password confirmation for all deletions
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
