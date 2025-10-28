@@ -912,6 +912,350 @@ class InvoiceAPITester:
         
         return success1 and success2
 
+    def test_xml_upload(self):
+        """Test NEW XML upload functionality"""
+        if not self.created_invoice_id:
+            print("⚠️  Skipping XML upload test - no invoice ID available")
+            return True
+        
+        # Use the test XML file
+        xml_path = "/app/test_factura.xml"
+        
+        if not os.path.exists(xml_path):
+            print("❌ Test XML file not found at /app/test_factura.xml")
+            return False
+        
+        try:
+            with open(xml_path, 'rb') as f:
+                files = {'file': ('test_factura.xml', f, 'application/xml')}
+                success, response_data = self.run_test(
+                    "Upload XML File (NEW FUNCTIONALITY)",
+                    "POST",
+                    f"invoices/{self.created_invoice_id}/upload-xml",
+                    200,
+                    files=files
+                )
+                
+                if success and response_data:
+                    print(f"   ✅ XML upload successful")
+                    if 'xml_filename' in response_data:
+                        print(f"   ✅ XML filename: {response_data['xml_filename']}")
+                        
+                        # Verify file was actually saved
+                        saved_file_path = f"/app/uploads/{response_data['xml_filename']}"
+                        if os.path.exists(saved_file_path):
+                            print(f"   ✅ XML file saved to: {saved_file_path}")
+                            file_size = os.path.getsize(saved_file_path)
+                            print(f"   ✅ File size: {file_size} bytes")
+                        else:
+                            print(f"   ❌ XML file not found at: {saved_file_path}")
+                            return False
+                    else:
+                        print("   ❌ No XML filename in response")
+                        return False
+                
+                return success
+        except Exception as e:
+            print(f"❌ XML upload failed with error: {e}")
+            return False
+
+    def test_xml_download(self):
+        """Test NEW XML download functionality"""
+        if not self.created_invoice_id:
+            print("⚠️  Skipping XML download test - no invoice ID available")
+            return True
+        
+        success, response_data = self.run_test(
+            "Download XML File (NEW FUNCTIONALITY)",
+            "GET",
+            f"invoices/{self.created_invoice_id}/download-xml",
+            200,
+            response_type='binary'
+        )
+        
+        if success:
+            print(f"   ✅ XML download successful, received {len(response_data)} bytes")
+            # Verify it has content and looks like XML
+            if len(response_data) > 0:
+                print("   ✅ XML file has content")
+                # Check if it starts with XML declaration
+                content_str = response_data.decode('utf-8', errors='ignore')[:100]
+                if '<?xml' in content_str or '<factura>' in content_str:
+                    print("   ✅ Content appears to be valid XML")
+                else:
+                    print("   ⚠️  Content may not be valid XML format")
+            else:
+                print("   ❌ XML file is empty")
+                return False
+        
+        return success
+
+    def test_invoice_with_xml_fields(self):
+        """Test that invoice listing includes XML fields"""
+        success, response_data = self.run_test(
+            "Get Invoices with XML Fields (NEW)",
+            "GET",
+            f"invoices/{self.test_empresa_id}",
+            200
+        )
+        
+        if success and response_data:
+            # Look for invoices with XML fields
+            invoices_with_xml = [inv for inv in response_data if inv.get('archivo_xml')]
+            
+            if invoices_with_xml:
+                print(f"   ✅ Found {len(invoices_with_xml)} invoices with XML")
+                for inv in invoices_with_xml[:3]:  # Show first 3
+                    print(f"   ✅ Invoice {inv.get('numero_factura', 'N/A')}: archivo_xml={inv.get('archivo_xml', 'N/A')}")
+                    print(f"      xml_original={inv.get('xml_original', 'N/A')}")
+            else:
+                print("   ⚠️  No invoices found with XML fields (may be expected if no XMLs uploaded)")
+            
+            # Verify all invoices have the XML fields (even if null)
+            all_have_fields = all('archivo_xml' in inv and 'xml_original' in inv for inv in response_data)
+            if all_have_fields:
+                print("   ✅ All invoices include archivo_xml and xml_original fields")
+            else:
+                print("   ❌ Some invoices missing XML fields")
+                return False
+        
+        return success
+
+    def test_xml_validation(self):
+        """Test XML validation - upload non-XML file should fail"""
+        if not self.created_invoice_id:
+            print("⚠️  Skipping XML validation test - no invoice ID available")
+            return True
+        
+        # Create a non-XML file (text file with .txt extension)
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.txt', mode='w') as temp_file:
+                temp_file.write("This is not an XML file")
+                temp_file_path = temp_file.name
+            
+            try:
+                with open(temp_file_path, 'rb') as f:
+                    files = {'file': ('not_xml.txt', f, 'text/plain')}
+                    success, response_data = self.run_test(
+                        "Upload Non-XML File (Should Fail)",
+                        "POST",
+                        f"invoices/{self.created_invoice_id}/upload-xml",
+                        400,  # Should return 400 Bad Request
+                        files=files
+                    )
+                    
+                    if success:
+                        print("   ✅ Non-XML file properly rejected with 400 error")
+                    else:
+                        print("   ❌ Non-XML file was not properly rejected")
+                        return False
+            finally:
+                if os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+            
+            return success
+        except Exception as e:
+            print(f"❌ XML validation test failed with error: {e}")
+            return False
+
+    def test_xml_download_without_xml(self):
+        """Test downloading XML from invoice without XML should return 404"""
+        # Create a new invoice without XML for this test
+        test_file_path = self.create_test_pdf()
+        if not test_file_path:
+            print("❌ Could not create test PDF for XML download test")
+            return False
+        
+        try:
+            with open(test_file_path, 'rb') as f:
+                files = {'file': ('test_no_xml.pdf', f, 'application/pdf')}
+                success_create, create_response = self.run_test(
+                    "Create Invoice for No-XML Download Test", 
+                    "POST", 
+                    f"upload-pdf/{self.test_empresa_id}", 
+                    200,
+                    files=files
+                )
+                
+                if success_create and 'data' in create_response:
+                    no_xml_invoice_id = create_response['data'].get('id')
+                    
+                    # Try to download XML from invoice that has none
+                    success, _ = self.run_test(
+                        "Download XML from Invoice Without XML (Should Fail)",
+                        "GET",
+                        f"invoices/{no_xml_invoice_id}/download-xml",
+                        404,
+                        response_type='binary'
+                    )
+                    
+                    if success:
+                        print("   ✅ Download XML from invoice without XML properly returns 404")
+                    else:
+                        print("   ❌ Download XML from invoice without XML did not return 404")
+                        return False
+                    
+                    # Clean up the test invoice
+                    self.run_test(
+                        "Cleanup No-XML Test Invoice",
+                        "DELETE",
+                        f"invoices/{no_xml_invoice_id}",
+                        200
+                    )
+                    
+                    return success
+                else:
+                    print("❌ Could not create test invoice for XML download test")
+                    return False
+        except Exception as e:
+            print(f"❌ XML download test failed with error: {e}")
+            return False
+        finally:
+            if os.path.exists(test_file_path):
+                os.unlink(test_file_path)
+
+    def test_xml_file_cleanup_on_deletion(self):
+        """Test that XML files are cleaned up when invoice is deleted"""
+        if not self.created_invoice_id:
+            print("⚠️  Skipping XML cleanup test - no invoice ID available")
+            return True
+        
+        # First, get the invoice to see if it has an XML file
+        success_get, invoice_data = self.run_test(
+            "Get Invoice Before Deletion (for XML cleanup test)",
+            "GET",
+            f"invoices/{self.test_empresa_id}",
+            200
+        )
+        
+        if not success_get:
+            print("❌ Could not get invoice data for XML cleanup test")
+            return False
+        
+        # Find our test invoice
+        test_invoice = None
+        for inv in invoice_data:
+            if inv.get('id') == self.created_invoice_id:
+                test_invoice = inv
+                break
+        
+        if not test_invoice:
+            print("❌ Could not find test invoice for XML cleanup test")
+            return False
+        
+        xml_filename = test_invoice.get('archivo_xml')
+        if xml_filename:
+            xml_path = f"/app/uploads/{xml_filename}"
+            file_exists_before = os.path.exists(xml_path)
+            print(f"   📁 XML file before deletion: {xml_path} (exists: {file_exists_before})")
+            
+            # Delete the invoice
+            success_delete, _ = self.run_test(
+                "Delete Invoice with XML (cleanup test)",
+                "DELETE",
+                f"invoices/{self.created_invoice_id}",
+                200
+            )
+            
+            if success_delete:
+                # Check if XML file was cleaned up
+                file_exists_after = os.path.exists(xml_path)
+                print(f"   📁 XML file after deletion: exists={file_exists_after}")
+                
+                if file_exists_before and not file_exists_after:
+                    print("   ✅ XML file properly cleaned up on invoice deletion")
+                    return True
+                elif not file_exists_before:
+                    print("   ⚠️  No XML file to clean up (test still passes)")
+                    return True
+                else:
+                    print("   ❌ XML file was not cleaned up on invoice deletion")
+                    return False
+            else:
+                print("   ❌ Invoice deletion failed")
+                return False
+        else:
+            print("   ⚠️  No XML file to test cleanup (test still passes)")
+            return True
+
+    def test_xml_full_workflow(self):
+        """Test complete XML workflow: upload → verify → delete invoice → verify cleanup"""
+        if not self.created_invoice_id:
+            print("⚠️  Skipping full XML workflow test - no invoice ID available")
+            return True
+        
+        print("\n🔄 Testing Complete XML Workflow...")
+        
+        # Step 1: Upload XML
+        xml_path = "/app/test_factura.xml"
+        if not os.path.exists(xml_path):
+            print("❌ Test XML file not found for workflow test")
+            return False
+        
+        try:
+            with open(xml_path, 'rb') as f:
+                files = {'file': ('workflow_test.xml', f, 'application/xml')}
+                success1, upload_response = self.run_test(
+                    "XML Workflow Step 1: Upload XML",
+                    "POST",
+                    f"invoices/{self.created_invoice_id}/upload-xml",
+                    200,
+                    files=files
+                )
+                
+                if not success1:
+                    print("❌ XML Workflow failed at upload step")
+                    return False
+                
+                xml_filename = upload_response.get('xml_filename')
+                print(f"   ✅ Step 1 Complete: Uploaded {xml_filename}")
+        except Exception as e:
+            print(f"❌ XML Workflow upload step failed: {e}")
+            return False
+        
+        # Step 2: Verify upload (download)
+        success2, download_data = self.run_test(
+            "XML Workflow Step 2: Verify Upload (Download)",
+            "GET",
+            f"invoices/{self.created_invoice_id}/download-xml",
+            200,
+            response_type='binary'
+        )
+        
+        if not success2 or len(download_data) == 0:
+            print("❌ XML Workflow failed at verification step")
+            return False
+        
+        print(f"   ✅ Step 2 Complete: Verified download ({len(download_data)} bytes)")
+        
+        # Step 3: Verify invoice listing includes XML fields
+        success3, invoice_data = self.run_test(
+            "XML Workflow Step 3: Verify Invoice Listing",
+            "GET",
+            f"invoices/{self.test_empresa_id}",
+            200
+        )
+        
+        if success3:
+            # Find our invoice and check XML fields
+            test_invoice = None
+            for inv in invoice_data:
+                if inv.get('id') == self.created_invoice_id:
+                    test_invoice = inv
+                    break
+            
+            if test_invoice and test_invoice.get('archivo_xml') and test_invoice.get('xml_original'):
+                print("   ✅ Step 3 Complete: Invoice listing includes XML fields")
+            else:
+                print("❌ XML Workflow failed: Invoice listing missing XML fields")
+                return False
+        else:
+            print("❌ XML Workflow failed at invoice listing verification")
+            return False
+        
+        print("🎉 Complete XML Workflow Test: ALL STEPS PASSED")
+        return True
+
     def test_invalid_endpoints(self):
         """Test error handling for invalid requests"""
         # Test non-existent invoice
