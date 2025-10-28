@@ -17,6 +17,48 @@ import { Toaster } from "./components/ui/sonner";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Error Boundary to catch and handle React errors gracefully
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('React Error Boundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto p-8">
+            <div className="text-red-600 text-6xl mb-4">⚠️</div>
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">
+              Error en la Aplicación
+            </h2>
+            <p className="text-slate-600 mb-6">
+              Ha ocurrido un error inesperado. Por favor, recarga la página para continuar.
+            </p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Recargar Página
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 // Safe download hook that avoids DOM manipulation issues
 const useDownload = () => {
   const downloadFile = useCallback((blob, filename) => {
