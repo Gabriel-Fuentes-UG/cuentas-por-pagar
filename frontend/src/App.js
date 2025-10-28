@@ -1382,6 +1382,7 @@ function App() {
         onDownloadPDF={downloadPDF}
         onUploadComprobante={uploadComprobante}
         onDownloadComprobante={downloadComprobante}
+        onDeleteComprobante={deleteComprobante}
         onExportPendientes={exportPendientes}
         onExportPagadas={exportPagadas}
         onExportResumen={exportResumen}
