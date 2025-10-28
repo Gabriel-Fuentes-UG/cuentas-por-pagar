@@ -49,6 +49,88 @@ const useDownload = () => {
   return downloadFile;
 };
 
+// Password confirmation dialog component
+const PasswordDialog = ({ isOpen, onClose, onConfirm, title, description }) => {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { toast } = useToast();
+
+  const handlePasswordSubmit = () => {
+    if (password === 'MAURO') {
+      onConfirm();
+      handleClose();
+    } else {
+      setError('Contraseña incorrecta');
+      toast({ 
+        title: "Error", 
+        description: "Contraseña incorrecta. Operación cancelada.", 
+        variant: "destructive" 
+      });
+      handleClose();
+    }
+  };
+
+  const handleClose = () => {
+    setPassword('');
+    setError('');
+    onClose();
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handlePasswordSubmit();
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Lock className="h-5 w-5 text-yellow-600" />
+            Confirmar con Contraseña
+          </DialogTitle>
+          <DialogDescription>
+            <span className="font-semibold">{title}</span>
+            <br />
+            {description}
+            <br /><br />
+            <span className="text-red-600 font-semibold">🔒 Ingresa la contraseña para continuar:</span>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>Contraseña de Seguridad</Label>
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ingresa contraseña..."
+              className="mt-2"
+              autoFocus
+            />
+            {error && (
+              <p className="text-sm text-red-600 mt-2">{error}</p>
+            )}
+          </div>
+          <div className="flex gap-3 pt-4">
+            <Button variant="outline" onClick={handleClose} className="flex-1">
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handlePasswordSubmit}
+              className="flex-1 bg-red-600 hover:bg-red-700"
+            >
+              Confirmar Eliminación
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // Company management component
 const CompanyManager = ({ 
   empresas, 
