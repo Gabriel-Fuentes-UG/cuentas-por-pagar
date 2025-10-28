@@ -187,8 +187,24 @@ const CompanyManager = ({
   };
 
   const handleDeleteEmpresa = () => {
-    onDeleteEmpresa(deletingEmpresa.id);
+    // Primer paso: cerrar diálogo de confirmación y abrir diálogo de contraseña
     setShowDeleteEmpresa(false);
+    setPendingAction(() => () => {
+      onDeleteEmpresa(deletingEmpresa.id);
+      setDeletingEmpresa(null);
+    });
+    setShowPasswordDialog(true);
+  };
+
+  const handlePasswordConfirm = () => {
+    if (pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+    }
+  };
+
+  const handlePasswordCancel = () => {
+    setPendingAction(null);
     setDeletingEmpresa(null);
   };
 
