@@ -988,6 +988,27 @@ const InvoiceManager = ({
                                 </Button>
                               </>
                             )}
+                            {!inv.archivo_xml ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openXmlUpload(inv)}
+                                className="text-blue-600"
+                                title="Subir Archivo XML"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onDownloadXml(inv.id, inv.numero_factura)}
+                                className="text-blue-600"
+                                title="Descargar Archivo XML"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
