@@ -940,7 +940,7 @@ class InvoiceAPITester:
                 success, response_data = self.run_test(
                     "Upload XML File (NEW FUNCTIONALITY)",
                     "POST",
-                    f"invoices/{self.created_invoice_id}/upload-xml",
+                    f"invoices/{invoice_id}/upload-xml",
                     200,
                     files=files
                 )
