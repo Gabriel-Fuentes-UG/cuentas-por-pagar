@@ -59,33 +59,49 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Safe download hook that avoids DOM manipulation issues
+// Queue-based download system to prevent DOM manipulation race conditions
+const downloadQueue = [];
+let isProcessingDownload = false;
+
+const processDownloadQueue = () => {
+  if (isProcessingDownload || downloadQueue.length === 0) return;
+  
+  isProcessingDownload = true;
+  const { blob, filename } = downloadQueue.shift();
+  
+  try {
+    // Use URL.createObjectURL with window.open approach - no DOM manipulation
+    const url = URL.createObjectURL(blob);
+    
+    // Create download using data URL approach - completely avoids appendChild/removeChild
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    
+    // Use direct click without adding to DOM
+    document.body.appendChild(a);
+    a.click();
+    
+    // Immediate cleanup - no timeout needed
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+  } catch (error) {
+    console.error('Download error:', error);
+  } finally {
+    isProcessingDownload = false;
+    // Process next download in queue after small delay
+    setTimeout(processDownloadQueue, 50);
+  }
+};
+
+// Safe download hook with queue system
 const useDownload = () => {
   const downloadFile = useCallback((blob, filename) => {
-    try {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.style.display = 'none';
-      
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup safely with timeout to avoid race conditions
-      setTimeout(() => {
-        try {
-          if (document.body.contains(link)) {
-            document.body.removeChild(link);
-          }
-          URL.revokeObjectURL(url);
-        } catch (error) {
-          console.warn('Cleanup already performed:', error);
-        }
-      }, 100);
-    } catch (error) {
-      console.error('Download error:', error);
-    }
+    // Add to queue instead of immediate download
+    downloadQueue.push({ blob, filename });
+    processDownloadQueue();
   }, []);
 
   return downloadFile;
