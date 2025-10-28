@@ -1711,6 +1711,31 @@ function App() {
     }
   };
 
+  const updateProvider = async (invoiceId, providerName) => {
+    try {
+      await axios.put(`${API}/invoices/${invoiceId}/proveedor`, {
+        nombre_proveedor: providerName
+      });
+      toast({ title: "Actualizado", description: "Nombre del proveedor actualizado" });
+      loadInvoices();
+      loadResumen(); // Refresh summary as provider names affect it
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo actualizar el proveedor", variant: "destructive" });
+    }
+  };
+
+  const updateInvoiceNumber = async (invoiceId, invoiceNumber) => {
+    try {
+      await axios.put(`${API}/invoices/${invoiceId}/numero`, {
+        numero_factura: invoiceNumber
+      });
+      toast({ title: "Actualizado", description: "Número de factura actualizado" });
+      loadInvoices();
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo actualizar el número de factura", variant: "destructive" });
+    }
+  };
+
   const deleteInvoice = async (invoiceId) => {
     try {
       await axios.delete(`${API}/invoices/${invoiceId}`);
