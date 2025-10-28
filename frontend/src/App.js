@@ -1046,6 +1046,36 @@ const InvoiceManager = ({
           </div>
         </DialogContent>
       </Dialog>
+      {/* Delete Comprobante Dialog */}
+      <Dialog open={showDeleteComprobante} onOpenChange={setShowDeleteComprobante}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Eliminar Comprobante de Pago
+            </DialogTitle>
+            <DialogDescription>
+              ¿Eliminar el comprobante de pago de la factura <strong>{deletingComprobante?.numero_factura}</strong>?
+              <br /><br />
+              <span className="text-red-600 font-semibold">⚠️ Esta acción:</span>
+              <br />
+              • Eliminará permanentemente el archivo del comprobante
+              <br />
+              • NO eliminará la factura, solo el comprobante
+              <br />
+              • NO se puede deshacer
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-4">
+            <Button variant="outline" onClick={() => setShowDeleteComprobante(false)} className="flex-1">
+              Cancelar
+            </Button>
+            <Button onClick={handleDeleteComprobante} className="flex-1 bg-red-600 hover:bg-red-700">
+              Eliminar Comprobante
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
