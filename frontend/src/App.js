@@ -605,7 +605,11 @@ const InvoiceManager = ({
 
   const handlePasswordConfirm = async () => {
     if (pendingAction) {
-      await pendingAction();
+      try {
+        await pendingAction();
+      } catch (error) {
+        console.error('Error in pending action:', error);
+      }
       setPendingAction(null);
     }
   };
