@@ -1632,6 +1632,36 @@ function App() {
     }
   };
 
+  // XML functions
+  const uploadXml = async (invoiceId, file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+      await axios.post(`${API}/invoices/${invoiceId}/upload-xml`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      toast({ title: "Éxito", description: "Archivo XML subido correctamente" });
+      loadInvoices(); // Refresh invoice list to show XML icon
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error.response?.data?.detail || "Error subiendo XML",
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const downloadXml = async (invoiceId, numeroFactura) => {
+    try {
+      const res = await axios.get(`${API}/invoices/${invoiceId}/download-xml`, { responseType: 'blob' });
+      downloadFile(res.data, `xml_${numeroFactura}.xml`);
+      toast({ title: "Descarga iniciada", description: `Archivo XML de factura ${numeroFactura}` });
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo descargar el archivo XML", variant: "destructive" });
+    }
+  };
+
   // Download functions using the safe download hook
   const downloadPDF = async (invoiceId, numeroFactura) => {
     try {
