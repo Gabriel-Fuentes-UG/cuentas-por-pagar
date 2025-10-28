@@ -1315,6 +1315,52 @@ const InvoiceManager = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Upload XML Dialog */}
+      <Dialog open={showXmlUpload} onOpenChange={setShowXmlUpload}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <X className="h-5 w-5 text-blue-600" />
+              Subir Archivo XML
+            </DialogTitle>
+            <DialogDescription>
+              Factura <strong>{uploadingXmlInvoice?.numero_factura}</strong> de <strong>{uploadingXmlInvoice?.nombre_proveedor}</strong>
+              <br />
+              <strong>Monto: {uploadingXmlInvoice && formatCurrency(uploadingXmlInvoice.monto)}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Archivo XML</Label>
+              <Input
+                type="file"
+                accept=".xml"
+                onChange={handleXmlFileSelect}
+                className="mt-2"
+              />
+              {xmlFile && (
+                <p className="text-sm text-slate-600 mt-2">
+                  Archivo: {xmlFile.name}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button variant="outline" onClick={() => setShowXmlUpload(false)} className="flex-1">
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleUploadXml} 
+                disabled={!xmlFile || uploadingXml}
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+              >
+                {uploadingXml ? "Subiendo..." : "Subir XML"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Comprobante Dialog */}
       <Dialog open={showDeleteComprobante} onOpenChange={setShowDeleteComprobante}>
         <DialogContent>
