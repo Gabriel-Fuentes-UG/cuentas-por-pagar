@@ -575,7 +575,7 @@ class InvoiceAPITester:
             success_delete, _ = self.run_test(
                 "Delete Invoice with Comprobante (cleanup test)",
                 "DELETE",
-                f"invoices/{self.created_invoice_id}",
+                f"invoices/{invoice_id}",
                 200
             )
             
@@ -1165,7 +1165,7 @@ class InvoiceAPITester:
             success_delete, _ = self.run_test(
                 "Delete Invoice with XML (cleanup test)",
                 "DELETE",
-                f"invoices/{self.created_invoice_id}",
+                f"invoices/{invoice_id}",
                 200
             )
             
