@@ -70,8 +70,15 @@ class InvoiceAPITester:
         return self.run_test("Root API Endpoint", "GET", "", 200)
 
     def test_get_invoices_empty(self):
-        """Test getting invoices when database might be empty"""
-        return self.run_test("Get All Invoices", "GET", f"invoices/{self.test_empresa_id}", 200)
+        """Test getting invoices and set existing invoice ID for XML testing"""
+        success, response_data = self.run_test("Get All Invoices", "GET", f"invoices/{self.test_empresa_id}", 200)
+        
+        # Set existing invoice ID for XML testing if available
+        if success and response_data and len(response_data) > 0:
+            self.existing_invoice_id = response_data[0].get('id')
+            print(f"   ✅ Found existing invoice for XML testing: {self.existing_invoice_id}")
+        
+        return success
 
     def test_get_invoices_with_filters(self):
         """Test getting invoices with filters"""
