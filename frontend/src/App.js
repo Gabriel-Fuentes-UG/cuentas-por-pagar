@@ -97,11 +97,16 @@ const PasswordDialog = ({ isOpen, onClose, onConfirm, title, description }) => {
   const [error, setError] = useState('');
 
   const handlePasswordSubmit = () => {
-    if (password === 'MAURO') {
-      onConfirm();
-      handleClose();
-    } else {
-      setError('Contraseña incorrecta');
+    try {
+      if (password === 'MAURO') {
+        onConfirm();
+        handleClose();
+      } else {
+        setError('Contraseña incorrecta');
+        handleClose();
+      }
+    } catch (error) {
+      console.error('Error in password submit:', error);
       handleClose();
     }
   };
