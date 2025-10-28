@@ -201,6 +201,18 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE TESTING COMPLETED: New comprobante (payment receipt) functionality fully tested and working perfectly. ALL SUCCESS CRITERIA MET: ✅ POST /api/invoices/{invoice_id}/upload-comprobante endpoint working - successfully uploads PDF files with unique filename generation ✅ GET /api/invoices/{invoice_id}/download-comprobante endpoint working - returns proper PDF files with correct headers ✅ Invoice model updated with comprobante_pago and comprobante_original fields - all invoices now include these fields in API responses ✅ File management working - comprobantes stored in /app/uploads/ with unique filenames (comprobante_{uuid}_{original_name}.pdf) ✅ File cleanup on deletion working - DELETE /api/invoices/{invoice_id} properly removes both invoice PDF and comprobante files ✅ Error handling working - proper 404 responses for non-existent invoices on download, upload returns appropriate errors. End-to-end testing confirmed: upload → database update → download → file cleanup all functioning correctly. Payment receipt functionality is production-ready."
 
+  - task: "DELETE comprobante functionality"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETED: NEW DELETE comprobante functionality fully tested and working perfectly. ALL SUCCESS CRITERIA MET: ✅ DELETE /api/invoices/{invoice_id}/delete-comprobante endpoint working - successfully removes comprobante files from server and clears database fields ✅ File cleanup verified - comprobante files properly removed from /app/uploads/ directory ✅ Database field clearing verified - comprobante_pago and comprobante_original fields set to null using $unset operation ✅ Invoice integrity maintained - invoice data remains completely intact after comprobante deletion ✅ Error handling working - proper 404 responses for non-existent invoices and invoices without comprobantes ✅ Complete workflow tested - upload → verify → delete → verify deletion → re-upload all working perfectly ✅ Edge cases tested - delete from non-existent invoice, delete when no comprobante exists, download after deletion all return proper 404 responses. End-to-end testing confirmed: DELETE comprobante functionality is production-ready and completes the comprobante feature set."
+
 frontend:
   - task: "Fix persistent removeChild DOM error"
     implemented: true
