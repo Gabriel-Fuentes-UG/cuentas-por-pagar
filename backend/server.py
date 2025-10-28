@@ -438,6 +438,51 @@ async def upload_comprobante_pago(invoice_id: str, file: UploadFile = File(...))
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.post("/invoices/{invoice_id}/upload-xml")
+async def upload_xml_file(invoice_id: str, file: UploadFile = File(...)):
+    """Sube un archivo XML para una factura"""
+    try:
+        # Verificar que la factura existe
+        invoice = await db.invoices.find_one({"id": invoice_id})
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Factura no encontrada")
+        
+        # Verificar que es un archivo XML
+        if not file.filename.lower().endswith('.xml'):
+            raise HTTPException(status_code=400, detail="Solo se permiten archivos XML")
+        
+        # Crear nombre único para el archivo
+        unique_filename = f"xml_{uuid.uuid4()}_{file.filename}"
+        file_path = f"/app/uploads/{unique_filename}"
+        
+        # Guardar archivo
+        content = await file.read()
+        with open(file_path, "wb") as buffer:
+            buffer.write(content)
+        
+        # Actualizar la factura con la información del XML
+        result = await db.invoices.update_one(
+            {"id": invoice_id},
+            {"$set": {
+                "archivo_xml": unique_filename,
+                "xml_original": file.filename
+            }}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Factura no encontrada")
+        
+        return {
+            "success": True,
+            "message": "Archivo XML subido correctamente",
+            "xml_filename": unique_filename
+        }
+        
+    except Exception as e:
+        logging.error(f"Error subiendo XML: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.get("/invoices/{invoice_id}/download")
 async def download_invoice_pdf(invoice_id: str):
     """Descarga el archivo PDF de una factura"""
