@@ -1269,6 +1269,323 @@ class InvoiceAPITester:
         print("🎉 Complete XML Workflow Test: ALL STEPS PASSED")
         return True
 
+    def test_update_provider_name(self):
+        """Test NEW provider name update functionality"""
+        invoice_id = self.created_invoice_id or self.existing_invoice_id
+        if not invoice_id:
+            print("⚠️  Skipping provider name update test - no invoice ID available")
+            return True
+        
+        # Get original invoice data first
+        success_get, invoice_data = self.run_test(
+            "Get Invoice Before Provider Update",
+            "GET",
+            f"invoices/{self.test_empresa_id}",
+            200
+        )
+        
+        if not success_get:
+            print("❌ Could not get invoice data for provider update test")
+            return False
+        
+        # Find our test invoice
+        original_invoice = None
+        for inv in invoice_data:
+            if inv.get('id') == invoice_id:
+                original_invoice = inv
+                break
+        
+        if not original_invoice:
+            print("❌ Could not find test invoice for provider update test")
+            return False
+        
+        original_provider = original_invoice.get('nombre_proveedor')
+        original_number = original_invoice.get('numero_factura')
+        original_amount = original_invoice.get('monto')
+        
+        print(f"   📋 Original provider: {original_provider}")
+        
+        # Test updating provider name
+        new_provider_name = "Proveedor Actualizado S.A."
+        success, response_data = self.run_test(
+            "Update Provider Name (NEW FUNCTIONALITY)",
+            "PUT",
+            f"invoices/{invoice_id}/proveedor",
+            200,
+            data={"nombre_proveedor": new_provider_name}
+        )
+        
+        if success and response_data:
+            print(f"   ✅ Provider update successful: {response_data.get('message', 'No message')}")
+            
+            if response_data.get('nombre_proveedor') == new_provider_name:
+                print(f"   ✅ Response confirms new provider: {new_provider_name}")
+            else:
+                print(f"   ❌ Response provider mismatch: expected {new_provider_name}, got {response_data.get('nombre_proveedor')}")
+                return False
+            
+            # Verify the update in database by getting invoice again
+            success_verify, updated_invoice_data = self.run_test(
+                "Verify Provider Update in Database",
+                "GET",
+                f"invoices/{self.test_empresa_id}",
+                200
+            )
+            
+            if success_verify:
+                # Find our updated invoice
+                updated_invoice = None
+                for inv in updated_invoice_data:
+                    if inv.get('id') == invoice_id:
+                        updated_invoice = inv
+                        break
+                
+                if updated_invoice:
+                    updated_provider = updated_invoice.get('nombre_proveedor')
+                    updated_number = updated_invoice.get('numero_factura')
+                    updated_amount = updated_invoice.get('monto')
+                    
+                    # Verify provider was updated
+                    if updated_provider == new_provider_name:
+                        print(f"   ✅ Database confirms provider update: {updated_provider}")
+                    else:
+                        print(f"   ❌ Database provider not updated: expected {new_provider_name}, got {updated_provider}")
+                        return False
+                    
+                    # Verify other fields remain unchanged
+                    if updated_number == original_number and updated_amount == original_amount:
+                        print("   ✅ Other invoice fields remain unchanged")
+                    else:
+                        print(f"   ❌ Other fields changed unexpectedly: number {original_number}->{updated_number}, amount {original_amount}->{updated_amount}")
+                        return False
+                else:
+                    print("   ❌ Could not find invoice after provider update")
+                    return False
+            else:
+                print("   ❌ Could not verify provider update in database")
+                return False
+        
+        return success
+
+    def test_update_invoice_number(self):
+        """Test NEW invoice number update functionality"""
+        invoice_id = self.created_invoice_id or self.existing_invoice_id
+        if not invoice_id:
+            print("⚠️  Skipping invoice number update test - no invoice ID available")
+            return True
+        
+        # Get original invoice data first
+        success_get, invoice_data = self.run_test(
+            "Get Invoice Before Number Update",
+            "GET",
+            f"invoices/{self.test_empresa_id}",
+            200
+        )
+        
+        if not success_get:
+            print("❌ Could not get invoice data for number update test")
+            return False
+        
+        # Find our test invoice
+        original_invoice = None
+        for inv in invoice_data:
+            if inv.get('id') == invoice_id:
+                original_invoice = inv
+                break
+        
+        if not original_invoice:
+            print("❌ Could not find test invoice for number update test")
+            return False
+        
+        original_provider = original_invoice.get('nombre_proveedor')
+        original_number = original_invoice.get('numero_factura')
+        original_amount = original_invoice.get('monto')
+        
+        print(f"   📋 Original invoice number: {original_number}")
+        
+        # Test updating invoice number
+        new_invoice_number = f"UPDATED-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        success, response_data = self.run_test(
+            "Update Invoice Number (NEW FUNCTIONALITY)",
+            "PUT",
+            f"invoices/{invoice_id}/numero",
+            200,
+            data={"numero_factura": new_invoice_number}
+        )
+        
+        if success and response_data:
+            print(f"   ✅ Invoice number update successful: {response_data.get('message', 'No message')}")
+            
+            if response_data.get('numero_factura') == new_invoice_number:
+                print(f"   ✅ Response confirms new number: {new_invoice_number}")
+            else:
+                print(f"   ❌ Response number mismatch: expected {new_invoice_number}, got {response_data.get('numero_factura')}")
+                return False
+            
+            # Verify the update in database by getting invoice again
+            success_verify, updated_invoice_data = self.run_test(
+                "Verify Invoice Number Update in Database",
+                "GET",
+                f"invoices/{self.test_empresa_id}",
+                200
+            )
+            
+            if success_verify:
+                # Find our updated invoice
+                updated_invoice = None
+                for inv in updated_invoice_data:
+                    if inv.get('id') == invoice_id:
+                        updated_invoice = inv
+                        break
+                
+                if updated_invoice:
+                    updated_provider = updated_invoice.get('nombre_proveedor')
+                    updated_number = updated_invoice.get('numero_factura')
+                    updated_amount = updated_invoice.get('monto')
+                    
+                    # Verify number was updated
+                    if updated_number == new_invoice_number:
+                        print(f"   ✅ Database confirms number update: {updated_number}")
+                    else:
+                        print(f"   ❌ Database number not updated: expected {new_invoice_number}, got {updated_number}")
+                        return False
+                    
+                    # Verify other fields remain unchanged (provider might have been updated in previous test)
+                    if updated_amount == original_amount:
+                        print("   ✅ Invoice amount remains unchanged")
+                    else:
+                        print(f"   ❌ Amount changed unexpectedly: {original_amount}->{updated_amount}")
+                        return False
+                else:
+                    print("   ❌ Could not find invoice after number update")
+                    return False
+            else:
+                print("   ❌ Could not verify number update in database")
+                return False
+        
+        return success
+
+    def test_edit_functionality_error_cases(self):
+        """Test error handling for edit functionality"""
+        # Test update provider on non-existent invoice
+        success1, _ = self.run_test(
+            "Update Provider on Non-existent Invoice",
+            "PUT",
+            "invoices/non-existent-id/proveedor",
+            404,
+            data={"nombre_proveedor": "Test Provider"}
+        )
+        
+        # Test update number on non-existent invoice
+        success2, _ = self.run_test(
+            "Update Number on Non-existent Invoice",
+            "PUT",
+            "invoices/non-existent-id/numero",
+            404,
+            data={"numero_factura": "TEST-123"}
+        )
+        
+        # Test with empty provider name (should still work as it's just validation)
+        invoice_id = self.created_invoice_id or self.existing_invoice_id
+        if invoice_id:
+            success3, _ = self.run_test(
+                "Update Provider with Empty Name",
+                "PUT",
+                f"invoices/{invoice_id}/proveedor",
+                200,  # Backend might accept empty string
+                data={"nombre_proveedor": ""}
+            )
+            
+            # Test with empty invoice number
+            success4, _ = self.run_test(
+                "Update Invoice Number with Empty Value",
+                "PUT",
+                f"invoices/{invoice_id}/numero",
+                200,  # Backend might accept empty string
+                data={"numero_factura": ""}
+            )
+        else:
+            success3 = True  # Skip if no invoice available
+            success4 = True
+        
+        return success1 and success2 and success3 and success4
+
+    def test_edit_functionality_integration(self):
+        """Test that edit changes appear in summary reports"""
+        invoice_id = self.created_invoice_id or self.existing_invoice_id
+        if not invoice_id:
+            print("⚠️  Skipping edit integration test - no invoice ID available")
+            return True
+        
+        # Update provider name to something unique for testing
+        unique_provider = f"Integration Test Provider {datetime.now().strftime('%H%M%S')}"
+        success_update, _ = self.run_test(
+            "Update Provider for Integration Test",
+            "PUT",
+            f"invoices/{invoice_id}/proveedor",
+            200,
+            data={"nombre_proveedor": unique_provider}
+        )
+        
+        if not success_update:
+            print("❌ Could not update provider for integration test")
+            return False
+        
+        # Check if the change appears in provider summary
+        success_summary, summary_data = self.run_test(
+            "Get Provider Summary After Update",
+            "GET",
+            f"resumen/proveedor/{self.test_empresa_id}",
+            200
+        )
+        
+        if success_summary and summary_data:
+            # Look for our updated provider in the summary
+            provider_found = False
+            for provider_summary in summary_data:
+                if provider_summary.get('proveedor') == unique_provider:
+                    provider_found = True
+                    print(f"   ✅ Updated provider found in summary: {unique_provider}")
+                    print(f"      Total deuda: ${provider_summary.get('total_deuda', 0):,.2f}")
+                    print(f"      Facturas pendientes: {provider_summary.get('facturas_pendientes', 0)}")
+                    break
+            
+            if not provider_found:
+                print(f"   ❌ Updated provider not found in summary: {unique_provider}")
+                print(f"   Available providers: {[p.get('proveedor') for p in summary_data]}")
+                return False
+        else:
+            print("❌ Could not get provider summary for integration test")
+            return False
+        
+        # Check if the change appears in general summary
+        success_general, general_data = self.run_test(
+            "Get General Summary After Update",
+            "GET",
+            f"resumen/general/{self.test_empresa_id}",
+            200
+        )
+        
+        if success_general and general_data:
+            # Check if our provider appears in the general summary's provider list
+            providers_in_general = general_data.get('proveedores', [])
+            provider_in_general = False
+            for provider in providers_in_general:
+                if provider.get('proveedor') == unique_provider:
+                    provider_in_general = True
+                    print(f"   ✅ Updated provider found in general summary: {unique_provider}")
+                    break
+            
+            if not provider_in_general:
+                print(f"   ❌ Updated provider not found in general summary")
+                return False
+        else:
+            print("❌ Could not get general summary for integration test")
+            return False
+        
+        print("   ✅ Edit functionality integration test passed - changes appear in all reports")
+        return True
+
     def test_invalid_endpoints(self):
         """Test error handling for invalid requests"""
         # Test non-existent invoice
