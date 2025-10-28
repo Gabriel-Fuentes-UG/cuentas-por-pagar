@@ -969,6 +969,15 @@ def main():
     print("\n📥 Testing NEW Comprobante Download Functionality...")
     tester.test_comprobante_download()
     
+    print("\n🗑️ Testing NEW DELETE Comprobante Functionality...")
+    tester.test_delete_comprobante()
+    
+    print("\n🚫 Testing DELETE Comprobante Error Cases...")
+    tester.test_delete_comprobante_error_cases()
+    
+    print("\n🔄 Testing Complete Comprobante Workflow...")
+    tester.test_comprobante_full_workflow()
+    
     print("\n📋 Testing Invoice Listing with Comprobante Fields...")
     tester.test_invoice_with_comprobante_fields()
     
