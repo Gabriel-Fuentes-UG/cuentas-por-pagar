@@ -498,6 +498,8 @@ const InvoiceManager = ({
   onUploadPDF,
   onUpdateInvoiceStatus,
   onUpdateContract,
+  onUpdateProvider,
+  onUpdateInvoiceNumber,
   onDeleteInvoice,
   onDownloadPDF,
   onUploadComprobante,
