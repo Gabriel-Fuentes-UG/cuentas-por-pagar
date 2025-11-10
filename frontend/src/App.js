@@ -120,12 +120,12 @@ const useDialogManager = () => {
   };
 };
 
-// Password confirmation dialog component
-const PasswordDialog = ({ isOpen, onClose, onConfirm, title, description }) => {
+// Password confirmation dialog component - Memoized to prevent unnecessary rerenders
+const PasswordDialog = React.memo(({ isOpen, onClose, onConfirm, title, description }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handlePasswordSubmit = () => {
+  const handlePasswordSubmit = useCallback(() => {
     try {
       if (password === 'MAURO') {
         onConfirm();
@@ -138,15 +138,15 @@ const PasswordDialog = ({ isOpen, onClose, onConfirm, title, description }) => {
       console.error('Error in password submit:', error);
       handleClose();
     }
-  };
+  }, [password, onConfirm]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setPassword('');
     setError('');
     onClose();
-  };
+  }, [onClose]);
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = useCallback((e) => {
     try {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -155,39 +155,40 @@ const PasswordDialog = ({ isOpen, onClose, onConfirm, title, description }) => {
     } catch (error) {
       console.error('Error in key press:', error);
     }
-  };
+  }, [handlePasswordSubmit]);
 
-  // Portal-safe dialog wrapper
+  // Reset internal state when dialog closes
   React.useEffect(() => {
-    if (isOpen) {
-      // Add delay to prevent race conditions with portal creation
-      const timer = setTimeout(() => {
-        // Ensure dialog is properly mounted before interactions
-      }, 50);
-      return () => clearTimeout(timer);
+    if (!isOpen) {
+      setPassword('');
+      setError('');
     }
   }, [isOpen]);
 
+  // Only render when actually open to prevent portal issues
+  if (!isOpen) return null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5 text-yellow-600" />
+    <Dialog key="password-dialog" open={isOpen} onOpenChange={handleClose}>
+      <DialogContent key="password-dialog-content">
+        <DialogHeader key="password-dialog-header">
+          <DialogTitle key="password-dialog-title" className="flex items-center gap-2">
+            <Lock key="password-dialog-icon" className="h-5 w-5 text-yellow-600" />
             Confirmar con Contraseña
           </DialogTitle>
-          <DialogDescription>
-            <span className="font-semibold">{title}</span>
-            <br />
+          <DialogDescription key="password-dialog-desc">
+            <span key="password-dialog-title-text" className="font-semibold">{title}</span>
+            <br key="password-dialog-br1" />
             {description}
-            <br /><br />
-            <span className="text-red-600 font-semibold">🔒 Ingresa la contraseña para continuar:</span>
+            <br key="password-dialog-br2" /><br key="password-dialog-br3" />
+            <span key="password-dialog-prompt" className="text-red-600 font-semibold">🔒 Ingresa la contraseña para continuar:</span>
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label>Contraseña de Seguridad</Label>
+        <div key="password-dialog-body" className="space-y-4">
+          <div key="password-dialog-input-wrapper">
+            <Label key="password-dialog-label">Contraseña de Seguridad</Label>
             <Input
+              key="password-dialog-input"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -197,14 +198,15 @@ const PasswordDialog = ({ isOpen, onClose, onConfirm, title, description }) => {
               autoFocus
             />
             {error && (
-              <p className="text-sm text-red-600 mt-2">{error}</p>
+              <p key="password-dialog-error" className="text-sm text-red-600 mt-2">{error}</p>
             )}
           </div>
-          <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={handleClose} className="flex-1">
+          <div key="password-dialog-buttons" className="flex gap-3 pt-4">
+            <Button key="password-dialog-cancel" variant="outline" onClick={handleClose} className="flex-1">
               Cancelar
             </Button>
             <Button 
+              key="password-dialog-confirm"
               onClick={handlePasswordSubmit}
               className="flex-1 bg-red-600 hover:bg-red-700"
             >
@@ -215,7 +217,7 @@ const PasswordDialog = ({ isOpen, onClose, onConfirm, title, description }) => {
       </DialogContent>
     </Dialog>
   );
-};
+});
 
 // Company management component
 const CompanyManager = ({ 
