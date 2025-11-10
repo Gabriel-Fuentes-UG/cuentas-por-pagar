@@ -1419,39 +1419,41 @@ const InvoiceManager = React.memo(({
       </Dialog>
 
       {/* Upload XML Dialog */}
-      <Dialog open={showXmlUpload} onOpenChange={setShowXmlUpload}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <X className="h-5 w-5 text-blue-600" />
+      <Dialog key="upload-xml-dialog" open={dialogManager.isDialogOpen('xmlUpload')} onOpenChange={() => dialogManager.closeDialog()}>
+        <DialogContent key="upload-xml-content">
+          <DialogHeader key="upload-xml-header">
+            <DialogTitle key="upload-xml-title" className="flex items-center gap-2">
+              <X key="upload-xml-icon" className="h-5 w-5 text-blue-600" />
               Subir Archivo XML
             </DialogTitle>
-            <DialogDescription>
-              Factura <strong>{uploadingXmlInvoice?.numero_factura}</strong> de <strong>{uploadingXmlInvoice?.nombre_proveedor}</strong>
-              <br />
-              <strong>Monto: {uploadingXmlInvoice && formatCurrency(uploadingXmlInvoice.monto)}</strong>
+            <DialogDescription key="upload-xml-desc">
+              Factura <strong key="upload-xml-num">{uploadingXmlInvoice?.numero_factura}</strong> de <strong key="upload-xml-provider">{uploadingXmlInvoice?.nombre_proveedor}</strong>
+              <br key="upload-xml-br" />
+              <strong key="upload-xml-monto">Monto: {uploadingXmlInvoice && formatCurrency(uploadingXmlInvoice.monto)}</strong>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Archivo XML</Label>
+          <div key="upload-xml-body" className="space-y-4">
+            <div key="upload-xml-input-wrapper">
+              <Label key="upload-xml-label">Archivo XML</Label>
               <Input
+                key="upload-xml-input"
                 type="file"
                 accept=".xml"
                 onChange={handleXmlFileSelect}
                 className="mt-2"
               />
               {xmlFile && (
-                <p className="text-sm text-slate-600 mt-2">
+                <p key="upload-xml-file-name" className="text-sm text-slate-600 mt-2">
                   Archivo: {xmlFile.name}
                 </p>
               )}
             </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowXmlUpload(false)} className="flex-1">
+            <div key="upload-xml-buttons" className="flex gap-3 pt-4">
+              <Button key="upload-xml-cancel" variant="outline" onClick={() => dialogManager.closeDialog()} className="flex-1">
                 Cancelar
               </Button>
               <Button 
+                key="upload-xml-submit"
                 onClick={handleUploadXml} 
                 disabled={!xmlFile || uploadingXml}
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
@@ -1464,34 +1466,35 @@ const InvoiceManager = React.memo(({
       </Dialog>
 
       {/* Edit Provider Dialog */}
-      <Dialog open={showEditProvider} onOpenChange={setShowEditProvider}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Edit3 className="h-5 w-5" />
+      <Dialog key="edit-provider-dialog" open={dialogManager.isDialogOpen('editProvider')} onOpenChange={() => dialogManager.closeDialog()}>
+        <DialogContent key="edit-provider-content">
+          <DialogHeader key="edit-provider-header">
+            <DialogTitle key="edit-provider-title" className="flex items-center gap-2">
+              <Edit3 key="edit-provider-icon" className="h-5 w-5" />
               Editar Nombre del Proveedor
             </DialogTitle>
-            <DialogDescription>
-              Factura <strong>{editingProviderInvoice?.numero_factura}</strong>
-              <br />
-              Proveedor actual: <strong>{editingProviderInvoice?.nombre_proveedor}</strong>
+            <DialogDescription key="edit-provider-desc">
+              Factura <strong key="edit-provider-num">{editingProviderInvoice?.numero_factura}</strong>
+              <br key="edit-provider-br" />
+              Proveedor actual: <strong key="edit-provider-current">{editingProviderInvoice?.nombre_proveedor}</strong>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Nombre del Proveedor</Label>
+          <div key="edit-provider-body" className="space-y-4">
+            <div key="edit-provider-input-wrapper">
+              <Label key="edit-provider-label">Nombre del Proveedor</Label>
               <Input
+                key="edit-provider-input"
                 value={providerForm}
                 onChange={(e) => setProviderForm(e.target.value)}
                 placeholder="Ingrese el nombre del proveedor..."
                 className="mt-2"
               />
             </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowEditProvider(false)} className="flex-1">
+            <div key="edit-provider-buttons" className="flex gap-3 pt-4">
+              <Button key="edit-provider-cancel" variant="outline" onClick={() => dialogManager.closeDialog()} className="flex-1">
                 Cancelar
               </Button>
-              <Button onClick={handleUpdateProvider} className="flex-1 bg-green-600 hover:bg-green-700">
+              <Button key="edit-provider-submit" onClick={handleUpdateProvider} className="flex-1 bg-green-600 hover:bg-green-700">
                 Actualizar
               </Button>
             </div>
@@ -1500,34 +1503,35 @@ const InvoiceManager = React.memo(({
       </Dialog>
 
       {/* Edit Invoice Number Dialog */}
-      <Dialog open={showEditInvoiceNumber} onOpenChange={setShowEditInvoiceNumber}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Edit3 className="h-5 w-5" />
+      <Dialog key="edit-number-dialog" open={dialogManager.isDialogOpen('editInvoiceNumber')} onOpenChange={() => dialogManager.closeDialog()}>
+        <DialogContent key="edit-number-content">
+          <DialogHeader key="edit-number-header">
+            <DialogTitle key="edit-number-title" className="flex items-center gap-2">
+              <Edit3 key="edit-number-icon" className="h-5 w-5" />
               Editar Número de Factura
             </DialogTitle>
-            <DialogDescription>
-              Proveedor: <strong>{editingNumberInvoice?.nombre_proveedor}</strong>
-              <br />
-              Número actual: <strong>{editingNumberInvoice?.numero_factura}</strong>
+            <DialogDescription key="edit-number-desc">
+              Proveedor: <strong key="edit-number-provider">{editingNumberInvoice?.nombre_proveedor}</strong>
+              <br key="edit-number-br" />
+              Número actual: <strong key="edit-number-current">{editingNumberInvoice?.numero_factura}</strong>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Número de Factura</Label>
+          <div key="edit-number-body" className="space-y-4">
+            <div key="edit-number-input-wrapper">
+              <Label key="edit-number-label">Número de Factura</Label>
               <Input
+                key="edit-number-input"
                 value={invoiceNumberForm}
                 onChange={(e) => setInvoiceNumberForm(e.target.value)}
                 placeholder="Ingrese el número de factura..."
                 className="mt-2"
               />
             </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowEditInvoiceNumber(false)} className="flex-1">
+            <div key="edit-number-buttons" className="flex gap-3 pt-4">
+              <Button key="edit-number-cancel" variant="outline" onClick={() => dialogManager.closeDialog()} className="flex-1">
                 Cancelar
               </Button>
-              <Button onClick={handleUpdateInvoiceNumber} className="flex-1 bg-green-600 hover:bg-green-700">
+              <Button key="edit-number-submit" onClick={handleUpdateInvoiceNumber} className="flex-1 bg-green-600 hover:bg-green-700">
                 Actualizar
               </Button>
             </div>
