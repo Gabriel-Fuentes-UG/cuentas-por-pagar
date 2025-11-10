@@ -1641,6 +1641,23 @@ function App() {
   const { toast } = useToast();
   const downloadFile = useDownload();
 
+  // IMPORTANT: ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  // Load empresas on mount (only when authenticated)
+  useEffect(() => {
+    if (isAuthenticated && !loading) {
+      loadEmpresas();
+    }
+  }, [isAuthenticated, loading]);
+
+  // Load empresa data when selected
+  useEffect(() => {
+    if (empresa && view === "empresa-detail" && isAuthenticated) {
+      loadInvoices();
+      loadResumen();
+      loadEstadoPagadas();
+    }
+  }, [empresa, view, isAuthenticated]);
+
   // Show loading screen while checking authentication
   if (loading) {
     return (
@@ -1657,20 +1674,6 @@ function App() {
   if (!isAuthenticated) {
     return <Login />;
   }
-
-  // Load empresas on mount
-  useEffect(() => {
-    loadEmpresas();
-  }, []);
-
-  // Load empresa data when selected
-  useEffect(() => {
-    if (empresa && view === "empresa-detail") {
-      loadInvoices();
-      loadResumen();
-      loadEstadoPagadas();
-    }
-  }, [empresa, view]);
 
   // API Functions
   const loadEmpresas = async () => {
