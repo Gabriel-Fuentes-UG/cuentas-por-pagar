@@ -871,7 +871,16 @@ const InvoiceManager = ({
 
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <Button variant="outline" onClick={onBackToEmpresas} className="mb-4">
+            <Button 
+              variant="outline" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onBackToEmpresas();
+              }}
+              className="mb-4 hover:bg-slate-100"
+              type="button"
+            >
               ← Volver a Empresas
             </Button>
             <h1 className="text-4xl font-bold text-slate-800 mb-2">{empresa?.nombre}</h1>
