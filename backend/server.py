@@ -878,8 +878,8 @@ async def delete_invoice(invoice_id: str, current_user: UserData = Depends(requi
 
 
 @api_router.get("/resumen/proveedor/{empresa_id}", response_model=List[ResumenProveedor])
-async def get_resumen_por_proveedor(empresa_id: str):
-    """Obtiene resumen de deuda agrupado por proveedor para una empresa"""
+async def get_resumen_por_proveedor(empresa_id: str, current_user: UserData = Depends(get_current_user)):
+    """Obtiene resumen de deuda agrupado por proveedor para una empresa - Requiere autenticación"""
     try:
         # Verificar que la empresa existe
         empresa = await db.empresas.find_one({"id": empresa_id, "activa": True})
