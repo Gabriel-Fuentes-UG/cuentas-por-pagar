@@ -741,8 +741,8 @@ async def download_comprobante_pago(invoice_id: str, current_user: UserData = De
 
 
 @api_router.get("/invoices/{invoice_id}/download-xml")
-async def download_xml_file(invoice_id: str):
-    """Descarga el archivo XML de una factura"""
+async def download_xml_file(invoice_id: str, current_user: UserData = Depends(get_current_user)):
+    """Descarga el archivo XML de una factura - Requiere autenticación"""
     try:
         # Buscar la factura en la base de datos
         invoice = await db.invoices.find_one({"id": invoice_id})
