@@ -358,60 +358,65 @@ const CompanyManager = React.memo(({
         )}
       </div>
 
-      {/* Dialogs */}
-      <Dialog open={showNewEmpresa} onOpenChange={setShowNewEmpresa}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Crear Nueva Empresa</DialogTitle>
-            <DialogDescription>Ingresa los datos de la nueva empresa.</DialogDescription>
+      {/* Dialogs - Using Dialog Manager to prevent concurrent dialogs */}
+      <Dialog key="new-empresa-dialog" open={dialogManager.isDialogOpen('newEmpresa')} onOpenChange={() => dialogManager.closeDialog()}>
+        <DialogContent key="new-empresa-content">
+          <DialogHeader key="new-empresa-header">
+            <DialogTitle key="new-empresa-title">Crear Nueva Empresa</DialogTitle>
+            <DialogDescription key="new-empresa-desc">Ingresa los datos de la nueva empresa.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Nombre de la Empresa *</Label>
+          <div key="new-empresa-body" className="space-y-4">
+            <div key="new-empresa-nombre">
+              <Label key="new-empresa-nombre-label">Nombre de la Empresa *</Label>
               <Input
+                key="new-empresa-nombre-input"
                 value={empresaForm.nombre}
                 onChange={(e) => setEmpresaForm({...empresaForm, nombre: e.target.value})}
                 placeholder="Ej: Mi Empresa S.A."
               />
             </div>
-            <div>
-              <Label>RUT/CUIT</Label>
+            <div key="new-empresa-rut">
+              <Label key="new-empresa-rut-label">RUT/CUIT</Label>
               <Input
+                key="new-empresa-rut-input"
                 value={empresaForm.rut_cuit}
                 onChange={(e) => setEmpresaForm({...empresaForm, rut_cuit: e.target.value})}
                 placeholder="Ej: 20-12345678-9"
               />
             </div>
-            <div>
-              <Label>Dirección</Label>
+            <div key="new-empresa-dir">
+              <Label key="new-empresa-dir-label">Dirección</Label>
               <Input
+                key="new-empresa-dir-input"
                 value={empresaForm.direccion}
                 onChange={(e) => setEmpresaForm({...empresaForm, direccion: e.target.value})}
                 placeholder="Ej: Av. Principal 123"
               />
             </div>
-            <div>
-              <Label>Teléfono</Label>
+            <div key="new-empresa-tel">
+              <Label key="new-empresa-tel-label">Teléfono</Label>
               <Input
+                key="new-empresa-tel-input"
                 value={empresaForm.telefono}
                 onChange={(e) => setEmpresaForm({...empresaForm, telefono: e.target.value})}
                 placeholder="Ej: +54 11 1234-5678"
               />
             </div>
-            <div>
-              <Label>Email</Label>
+            <div key="new-empresa-email">
+              <Label key="new-empresa-email-label">Email</Label>
               <Input
+                key="new-empresa-email-input"
                 type="email"
                 value={empresaForm.email}
                 onChange={(e) => setEmpresaForm({...empresaForm, email: e.target.value})}
                 placeholder="Ej: contacto@miempresa.com"
               />
             </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowNewEmpresa(false)} className="flex-1">
+            <div key="new-empresa-buttons" className="flex gap-3 pt-4">
+              <Button key="new-empresa-cancel" variant="outline" onClick={() => dialogManager.closeDialog()} className="flex-1">
                 Cancelar
               </Button>
-              <Button onClick={handleCreateEmpresa} className="flex-1">
+              <Button key="new-empresa-submit" onClick={handleCreateEmpresa} className="flex-1">
                 Crear Empresa
               </Button>
             </div>
@@ -419,56 +424,61 @@ const CompanyManager = React.memo(({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showEditEmpresa} onOpenChange={setShowEditEmpresa}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+      <Dialog key="edit-empresa-dialog" open={dialogManager.isDialogOpen('editEmpresa')} onOpenChange={() => dialogManager.closeDialog()}>
+        <DialogContent key="edit-empresa-content">
+          <DialogHeader key="edit-empresa-header">
+            <DialogTitle key="edit-empresa-title" className="flex items-center gap-2">
+              <Settings key="edit-empresa-icon" className="h-5 w-5" />
               Editar Empresa
             </DialogTitle>
-            <DialogDescription>Modifica los datos de {editingEmpresa?.nombre}</DialogDescription>
+            <DialogDescription key="edit-empresa-desc">Modifica los datos de {editingEmpresa?.nombre}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Nombre de la Empresa *</Label>
+          <div key="edit-empresa-body" className="space-y-4">
+            <div key="edit-empresa-nombre">
+              <Label key="edit-empresa-nombre-label">Nombre de la Empresa *</Label>
               <Input
+                key="edit-empresa-nombre-input"
                 value={empresaForm.nombre}
                 onChange={(e) => setEmpresaForm({...empresaForm, nombre: e.target.value})}
               />
             </div>
-            <div>
-              <Label>RUT/CUIT</Label>
+            <div key="edit-empresa-rut">
+              <Label key="edit-empresa-rut-label">RUT/CUIT</Label>
               <Input
+                key="edit-empresa-rut-input"
                 value={empresaForm.rut_cuit}
                 onChange={(e) => setEmpresaForm({...empresaForm, rut_cuit: e.target.value})}
               />
             </div>
-            <div>
-              <Label>Dirección</Label>
+            <div key="edit-empresa-dir">
+              <Label key="edit-empresa-dir-label">Dirección</Label>
               <Input
+                key="edit-empresa-dir-input"
                 value={empresaForm.direccion}
                 onChange={(e) => setEmpresaForm({...empresaForm, direccion: e.target.value})}
               />
             </div>
-            <div>
-              <Label>Teléfono</Label>
+            <div key="edit-empresa-tel">
+              <Label key="edit-empresa-tel-label">Teléfono</Label>
               <Input
+                key="edit-empresa-tel-input"
                 value={empresaForm.telefono}
                 onChange={(e) => setEmpresaForm({...empresaForm, telefono: e.target.value})}
               />
             </div>
-            <div>
-              <Label>Email</Label>
+            <div key="edit-empresa-email">
+              <Label key="edit-empresa-email-label">Email</Label>
               <Input
+                key="edit-empresa-email-input"
                 value={empresaForm.email}
                 onChange={(e) => setEmpresaForm({...empresaForm, email: e.target.value})}
               />
             </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowEditEmpresa(false)} className="flex-1">
+            <div key="edit-empresa-buttons" className="flex gap-3 pt-4">
+              <Button key="edit-empresa-cancel" variant="outline" onClick={() => dialogManager.closeDialog()} className="flex-1">
                 Cancelar
               </Button>
-              <Button onClick={handleEditEmpresa} className="flex-1">
+              <Button key="edit-empresa-submit" onClick={handleEditEmpresa} className="flex-1">
                 Actualizar
               </Button>
             </div>
@@ -476,30 +486,30 @@ const CompanyManager = React.memo(({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showDeleteEmpresa} onOpenChange={setShowDeleteEmpresa}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+      <Dialog key="delete-empresa-dialog" open={dialogManager.isDialogOpen('deleteEmpresa')} onOpenChange={() => dialogManager.closeDialog()}>
+        <DialogContent key="delete-empresa-content">
+          <DialogHeader key="delete-empresa-header">
+            <DialogTitle key="delete-empresa-title" className="flex items-center gap-2">
+              <AlertTriangle key="delete-empresa-icon" className="h-5 w-5 text-red-600" />
               Confirmar Eliminación
             </DialogTitle>
-            <DialogDescription>
-              ¿Eliminar empresa <strong>{deletingEmpresa?.nombre}</strong>?
-              <br /><br />
-              <span className="text-red-600 font-semibold">⚠️ ADVERTENCIA:</span>
-              <br />
+            <DialogDescription key="delete-empresa-desc">
+              ¿Eliminar empresa <strong key="delete-empresa-name">{deletingEmpresa?.nombre}</strong>?
+              <br key="delete-empresa-br1" /><br key="delete-empresa-br2" />
+              <span key="delete-empresa-warning" className="text-red-600 font-semibold">⚠️ ADVERTENCIA:</span>
+              <br key="delete-empresa-br3" />
               • Se eliminará la empresa y todos sus datos
-              <br />
+              <br key="delete-empresa-br4" />
               • Se eliminarán todas las facturas asociadas
-              <br />
+              <br key="delete-empresa-br5" />
               • Esta acción NO se puede deshacer
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={() => setShowDeleteEmpresa(false)} className="flex-1">
+          <div key="delete-empresa-buttons" className="flex gap-3 pt-4">
+            <Button key="delete-empresa-cancel" variant="outline" onClick={() => dialogManager.closeDialog()} className="flex-1">
               Cancelar
             </Button>
-            <Button onClick={handleDeleteEmpresa} className="flex-1 bg-red-600 hover:bg-red-700">
+            <Button key="delete-empresa-submit" onClick={handleDeleteEmpresa} className="flex-1 bg-red-600 hover:bg-red-700">
               Eliminar
             </Button>
           </div>
@@ -507,18 +517,16 @@ const CompanyManager = React.memo(({
       </Dialog>
 
       <PasswordDialog
-        isOpen={showPasswordDialog}
-        onClose={() => {
-          setShowPasswordDialog(false);
-          handlePasswordCancel();
-        }}
+        key="empresa-password-dialog"
+        isOpen={dialogManager.isDialogOpen('password')}
+        onClose={handlePasswordCancel}
         onConfirm={handlePasswordConfirm}
-        title="Eliminar Empresa"
-        description={`Se eliminará permanentemente la empresa "${deletingEmpresa?.nombre}" y todas sus facturas asociadas.`}
+        title={dialogManager.dialogData?.title || "Eliminar Empresa"}
+        description={dialogManager.dialogData?.description || `Se eliminará permanentemente la empresa "${deletingEmpresa?.nombre}" y todas sus facturas asociadas.`}
       />
     </div>
   );
-};
+});
 
 // Invoice management component
 const InvoiceManager = ({ 
