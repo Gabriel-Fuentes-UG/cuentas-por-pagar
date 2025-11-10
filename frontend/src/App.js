@@ -308,16 +308,35 @@ const CompanyManager = React.memo(({
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* User Header */}
+        <div className="flex justify-between items-center mb-8 bg-white rounded-lg shadow-sm px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <User className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800">{user?.username}</p>
+              <p className="text-sm text-slate-500 capitalize">{user?.role === 'admin' ? 'Administrador' : 'Solo Lectura'}</p>
+            </div>
+          </div>
+          <Button variant="outline" onClick={onLogout} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+            <LogOut className="h-4 w-4 mr-2" />
+            Cerrar Sesión
+          </Button>
+        </div>
+
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-slate-800 mb-4">Panel de Gestión Empresarial</h1>
           <p className="text-slate-600 text-xl">Gestiona las cuentas por pagar de todas tus empresas</p>
         </div>
 
         <div className="mb-8 text-center">
-          <Button size="lg" className="bg-blue-600 hover:bg-blue-700" onClick={openNewEmpresa}>
-            <Plus className="h-5 w-5 mr-2" />
-            Nueva Empresa
-          </Button>
+          {user?.role === 'admin' && (
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-700" onClick={openNewEmpresa}>
+              <Plus className="h-5 w-5 mr-2" />
+              Nueva Empresa
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
