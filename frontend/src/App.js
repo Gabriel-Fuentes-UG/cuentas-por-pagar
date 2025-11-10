@@ -222,7 +222,7 @@ const PasswordDialog = React.memo(({ isOpen, onClose, onConfirm, title, descript
 });
 
 // Company management component - Using Dialog Manager for safe dialog handling
-const CompanyManager = React.memo(({ 
+const CompanyManager = ({ 
   empresas, 
   onSelectEmpresa, 
   onCreateEmpresa, 
