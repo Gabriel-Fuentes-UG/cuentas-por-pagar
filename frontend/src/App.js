@@ -637,29 +637,28 @@ const InvoiceManager = React.memo(({
     }
   };
 
-  const openContractEdit = (invoice) => {
+  const openContractEdit = useCallback((invoice) => {
     setEditingInvoice(invoice);
     setContractForm(invoice.numero_contrato || "");
-    setShowContractEdit(true);
-  };
+    dialogManager.openDialog('contractEdit');
+  }, [dialogManager]);
 
-  const openDeleteInvoice = (invoice) => {
+  const openDeleteInvoice = useCallback((invoice) => {
     setDeletingInvoice(invoice);
-    setShowDeleteInvoice(true);
-  };
+    dialogManager.openDialog('deleteInvoice');
+  }, [dialogManager]);
 
-  const handleUpdateContract = async () => {
+  const handleUpdateContract = useCallback(async () => {
     if (!editingInvoice) return;
     await onUpdateContract(editingInvoice.id, contractForm);
-    setShowContractEdit(false);
+    dialogManager.closeDialog();
     setEditingInvoice(null);
     setContractForm("");
-  };
+  }, [editingInvoice, contractForm, onUpdateContract, dialogManager]);
 
-  const handleDeleteInvoice = async () => {
+  const handleDeleteInvoice = useCallback(async () => {
     if (!deletingInvoice) return;
     // Primer paso: cerrar diálogo de confirmación y abrir diálogo de contraseña
-    setShowDeleteInvoice(false);
     setPendingAction(() => async () => {
       await onDeleteInvoice(deletingInvoice.id);
       setDeletingInvoice(null);
@@ -668,47 +667,46 @@ const InvoiceManager = React.memo(({
       title: "Eliminar Factura",
       description: `Se eliminará permanentemente la factura "${deletingInvoice.numero_factura}" de "${deletingInvoice.nombre_proveedor}" y su archivo PDF asociado.`
     });
-    setShowPasswordDialog(true);
-  };
+    dialogManager.openDialog('password');
+  }, [deletingInvoice, onDeleteInvoice, dialogManager]);
 
-  const openComprobanteUpload = (invoice) => {
+  const openComprobanteUpload = useCallback((invoice) => {
     setUploadingInvoice(invoice);
     setComprobanteFile(null);
-    setShowComprobanteUpload(true);
-  };
+    dialogManager.openDialog('comprobanteUpload');
+  }, [dialogManager]);
 
-  const handleComprobanteFileSelect = (event) => {
+  const handleComprobanteFileSelect = useCallback((event) => {
     const file = event.target.files[0];
     if (file && file.type === "application/pdf") {
       setComprobanteFile(file);
     } else {
       toast({ title: "Error", description: "Selecciona un archivo PDF válido", variant: "destructive" });
     }
-  };
+  }, [toast]);
 
-  const handleUploadComprobante = async () => {
+  const handleUploadComprobante = useCallback(async () => {
     if (!comprobanteFile || !uploadingInvoice) return;
     
     setUploadingComprobante(true);
     try {
       await onUploadComprobante(uploadingInvoice.id, comprobanteFile);
-      setShowComprobanteUpload(false);
+      dialogManager.closeDialog();
       setUploadingInvoice(null);
       setComprobanteFile(null);
     } finally {
       setUploadingComprobante(false);
     }
-  };
+  }, [comprobanteFile, uploadingInvoice, onUploadComprobante, dialogManager]);
 
-  const openDeleteComprobante = (invoice) => {
+  const openDeleteComprobante = useCallback((invoice) => {
     setDeletingComprobante(invoice);
-    setShowDeleteComprobante(true);
-  };
+    dialogManager.openDialog('deleteComprobante');
+  }, [dialogManager]);
 
-  const handleDeleteComprobante = async () => {
+  const handleDeleteComprobante = useCallback(async () => {
     if (!deletingComprobante) return;
     // Primer paso: cerrar diálogo de confirmación y abrir diálogo de contraseña
-    setShowDeleteComprobante(false);
     setPendingAction(() => async () => {
       await onDeleteComprobante(deletingComprobante.id);
       setDeletingComprobante(null);
@@ -717,10 +715,10 @@ const InvoiceManager = React.memo(({
       title: "Eliminar Comprobante de Pago",
       description: `Se eliminará permanentemente el comprobante de pago de la factura "${deletingComprobante.numero_factura}".`
     });
-    setShowPasswordDialog(true);
-  };
+    dialogManager.openDialog('password');
+  }, [deletingComprobante, onDeleteComprobante, dialogManager]);
 
-  const handlePasswordConfirm = async () => {
+  const handlePasswordConfirm = useCallback(async () => {
     if (pendingAction) {
       try {
         await pendingAction();
@@ -729,13 +727,15 @@ const InvoiceManager = React.memo(({
       }
       setPendingAction(null);
     }
-  };
+    dialogManager.closeDialog();
+  }, [pendingAction, dialogManager]);
 
-  const handlePasswordCancel = () => {
+  const handlePasswordCancel = useCallback(() => {
     setPendingAction(null);
     setDeletingInvoice(null);
     setDeletingComprobante(null);
-  };
+    dialogManager.closeDialog();
+  }, [dialogManager]);
 
   const openXmlUpload = (invoice) => {
     setUploadingXmlInvoice(invoice);
