@@ -549,7 +549,7 @@ const CompanyManager = ({
       />
     </div>
   );
-});
+};
 
 // Invoice management component - Using Dialog Manager for safe dialog handling
 const InvoiceManager = ({ 
