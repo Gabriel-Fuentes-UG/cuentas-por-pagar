@@ -51,6 +51,11 @@ USERS_DB = {
         "hashed_password": pwd_context.hash("admin123"),  # Change in production
         "role": "admin"
     },
+    "MAURO": {
+        "username": "MAURO",
+        "hashed_password": pwd_context.hash("Mauro123456"),
+        "role": "admin"
+    },
     "contratos": {
         "username": "contratos", 
         "hashed_password": pwd_context.hash("SEDENA199156"),
