@@ -1979,6 +1979,8 @@ function App() {
           onCreateEmpresa={createEmpresa}
           onEditEmpresa={editEmpresa}
           onDeleteEmpresa={deleteEmpresa}
+          user={user}
+          onLogout={logout}
         />
         <Toaster />
       </>
@@ -2008,6 +2010,8 @@ function App() {
         onExportPendientes={exportPendientes}
         onExportPagadas={exportPagadas}
         onExportResumen={exportResumen}
+        user={user}
+        onLogout={logout}
       />
       <Toaster />
     </>
