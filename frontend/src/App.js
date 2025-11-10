@@ -63,18 +63,8 @@ class ErrorBoundary extends React.Component {
   // Removed auto-recovery to prevent interference with button clicks
 
   render() {
-    // Even if there's an error, we auto-recover, so this screen rarely shows
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-          <div className="text-center max-w-md mx-auto p-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-slate-600">Cargando...</p>
-          </div>
-        </div>
-      );
-    }
-
+    // Don't show error screen for benign errors - they're already filtered
+    // If hasError is true for a real error, just render children anyway to avoid blocking the app
     return this.props.children;
   }
 }
