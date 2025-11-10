@@ -1540,30 +1540,30 @@ const InvoiceManager = React.memo(({
       </Dialog>
 
       {/* Delete Comprobante Dialog */}
-      <Dialog open={showDeleteComprobante} onOpenChange={setShowDeleteComprobante}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+      <Dialog key="delete-comprobante-dialog" open={dialogManager.isDialogOpen('deleteComprobante')} onOpenChange={() => dialogManager.closeDialog()}>
+        <DialogContent key="delete-comprobante-content">
+          <DialogHeader key="delete-comprobante-header">
+            <DialogTitle key="delete-comprobante-title" className="flex items-center gap-2">
+              <AlertTriangle key="delete-comprobante-icon" className="h-5 w-5 text-red-600" />
               Eliminar Comprobante de Pago
             </DialogTitle>
-            <DialogDescription>
-              ¿Eliminar el comprobante de pago de la factura <strong>{deletingComprobante?.numero_factura}</strong>?
-              <br /><br />
-              <span className="text-red-600 font-semibold">⚠️ Esta acción:</span>
-              <br />
+            <DialogDescription key="delete-comprobante-desc">
+              ¿Eliminar el comprobante de pago de la factura <strong key="delete-comprobante-num">{deletingComprobante?.numero_factura}</strong>?
+              <br key="delete-comprobante-br1" /><br key="delete-comprobante-br2" />
+              <span key="delete-comprobante-warning" className="text-red-600 font-semibold">⚠️ Esta acción:</span>
+              <br key="delete-comprobante-br3" />
               • Eliminará permanentemente el archivo del comprobante
-              <br />
+              <br key="delete-comprobante-br4" />
               • NO eliminará la factura, solo el comprobante
-              <br />
+              <br key="delete-comprobante-br5" />
               • NO se puede deshacer
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={() => setShowDeleteComprobante(false)} className="flex-1">
+          <div key="delete-comprobante-buttons" className="flex gap-3 pt-4">
+            <Button key="delete-comprobante-cancel" variant="outline" onClick={() => dialogManager.closeDialog()} className="flex-1">
               Cancelar
             </Button>
-            <Button onClick={handleDeleteComprobante} className="flex-1 bg-red-600 hover:bg-red-700">
+            <Button key="delete-comprobante-submit" onClick={handleDeleteComprobante} className="flex-1 bg-red-600 hover:bg-red-700">
               Eliminar Comprobante
             </Button>
           </div>
@@ -1571,18 +1571,16 @@ const InvoiceManager = React.memo(({
       </Dialog>
 
       <PasswordDialog
-        isOpen={showPasswordDialog}
-        onClose={() => {
-          setShowPasswordDialog(false);
-          handlePasswordCancel();
-        }}
+        key="invoice-password-dialog"
+        isOpen={dialogManager.isDialogOpen('password')}
+        onClose={handlePasswordCancel}
         onConfirm={handlePasswordConfirm}
         title={passwordDialogInfo.title}
         description={passwordDialogInfo.description}
       />
     </div>
   );
-};
+});
 
 // Main App component
 function App() {
