@@ -4,35 +4,7 @@ import "./index.css";
 import App from "./App";
 import { AuthProvider } from "./contexts/AuthContext";
 
-// DISABLE React Error Overlay for removeChild errors
-// This must be done BEFORE any React code runs
-if (process.env.NODE_ENV === 'development') {
-  // Completely disable error overlay for specific errors
-  const originalErrorHandler = window.addEventListener;
-  window.addEventListener = function(type, listener, options) {
-    if (type === 'error' || type === 'unhandledrejection') {
-      const wrappedListener = function(event) {
-        const errorMessage = event.error?.message || event.reason?.message || event.message || '';
-        const isRemoveChildError = 
-          errorMessage.includes('removeChild') || 
-          errorMessage.includes('eliminar no es un hijo') ||
-          errorMessage.includes('NotFoundError');
-        
-        if (isRemoveChildError) {
-          console.warn('[SUPPRESSED] removeChild error (React 18 + Radix UI known issue)');
-          event.stopImmediatePropagation();
-          event.stopPropagation();
-          event.preventDefault();
-          return false;
-        }
-        
-        return listener.call(this, event);
-      };
-      return originalErrorHandler.call(this, type, wrappedListener, options);
-    }
-    return originalErrorHandler.call(this, type, listener, options);
-  };
-}
+// Removed addEventListener wrapper to avoid interfering with normal event handlers
 
 // KNOWN ISSUE: React 18 + Radix UI Dialog portal incompatibility causes removeChild errors
 // Multiple layers of suppression to prevent error overlay
