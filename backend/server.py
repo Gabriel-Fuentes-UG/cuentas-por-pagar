@@ -531,8 +531,8 @@ async def update_invoice_contract(invoice_id: str, update: InvoiceContractUpdate
 
 
 @api_router.put("/invoices/{invoice_id}/proveedor")
-async def update_invoice_provider(invoice_id: str, update: InvoiceProviderUpdate):
-    """Actualiza el nombre del proveedor de una factura"""
+async def update_invoice_provider(invoice_id: str, update: InvoiceProviderUpdate, current_user: UserData = Depends(require_admin)):
+    """Actualiza el nombre del proveedor de una factura - Solo admin"""
     try:
         result = await db.invoices.update_one(
             {"id": invoice_id},
