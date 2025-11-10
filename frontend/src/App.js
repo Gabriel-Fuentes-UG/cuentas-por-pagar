@@ -819,9 +819,28 @@ const InvoiceManager = React.memo(({
     setInvoiceNumberForm("");
   }, [editingNumberInvoice, invoiceNumberForm, onUpdateInvoiceNumber, dialogManager]);
 
+  const isAdmin = user?.role === 'admin';
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* User Header */}
+        <div className="flex justify-between items-center mb-6 bg-white rounded-lg shadow-sm px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <User className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800">{user?.username}</p>
+              <p className="text-sm text-slate-500 capitalize">{user?.role === 'admin' ? 'Administrador' : 'Solo Lectura'}</p>
+            </div>
+          </div>
+          <Button variant="outline" onClick={onLogout} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+            <LogOut className="h-4 w-4 mr-2" />
+            Cerrar Sesión
+          </Button>
+        </div>
+
         <div className="mb-8 flex items-center justify-between">
           <div>
             <Button variant="outline" onClick={onBackToEmpresas} className="mb-4">
