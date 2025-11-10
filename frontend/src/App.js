@@ -59,34 +59,65 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// COMPLETELY SAFE download without any DOM manipulation
+// ULTRA-SAFE download using native browser API
 const useDownload = () => {
   const downloadFile = useCallback((blob, filename) => {
-    try {
-      // Create object URL
-      const url = URL.createObjectURL(blob);
-      
-      // Create invisible link but NEVER add to DOM
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      
-      // Trigger download WITHOUT DOM manipulation
-      link.dispatchEvent(new MouseEvent('click', {
-        view: window,
-        bubbles: true,
-        cancelable: true
-      }));
-      
-      // Immediate cleanup - no timeout, no DOM operations
-      URL.revokeObjectURL(url);
-      
-    } catch (error) {
-      console.error('Download error:', error);
-    }
+    // Use requestAnimationFrame to ensure we're outside React's render cycle
+    requestAnimationFrame(() => {
+      try {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.style.display = 'none'; // Completely hidden
+        link.href = url;
+        link.download = filename;
+        
+        // Use click() instead of dispatchEvent for maximum compatibility
+        link.click();
+        
+        // Cleanup after a safe delay
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 100);
+      } catch (error) {
+        console.error('Download error:', error);
+      }
+    });
   }, []);
 
   return downloadFile;
+};
+
+// Dialog Manager Hook - prevents multiple dialogs from being open simultaneously
+const useDialogManager = () => {
+  const [activeDialog, setActiveDialog] = useState(null);
+  const [dialogData, setDialogData] = useState(null);
+
+  const openDialog = useCallback((dialogName, data = null) => {
+    // Close any existing dialog first (mutex pattern)
+    setActiveDialog(null);
+    // Use microtask to ensure clean state transition
+    Promise.resolve().then(() => {
+      setActiveDialog(dialogName);
+      setDialogData(data);
+    });
+  }, []);
+
+  const closeDialog = useCallback(() => {
+    setActiveDialog(null);
+    setDialogData(null);
+  }, []);
+
+  const isDialogOpen = useCallback((dialogName) => {
+    return activeDialog === dialogName;
+  }, [activeDialog]);
+
+  return {
+    activeDialog,
+    dialogData,
+    openDialog,
+    closeDialog,
+    isDialogOpen
+  };
 };
 
 // Password confirmation dialog component
