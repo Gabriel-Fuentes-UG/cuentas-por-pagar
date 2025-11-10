@@ -897,7 +897,8 @@ const InvoiceManager = React.memo(({
                 </Button>
               </CardContent>
             </Card>
-          </TabsContent>
+            </TabsContent>
+          )}
 
           <TabsContent value="dashboard">
             {resumen && (
