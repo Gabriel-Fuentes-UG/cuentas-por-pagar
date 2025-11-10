@@ -1372,39 +1372,41 @@ const InvoiceManager = React.memo(({
       </Dialog>
 
       {/* Upload Comprobante Dialog */}
-      <Dialog open={showComprobanteUpload} onOpenChange={setShowComprobanteUpload}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
+      <Dialog key="upload-comprobante-dialog" open={dialogManager.isDialogOpen('comprobanteUpload')} onOpenChange={() => dialogManager.closeDialog()}>
+        <DialogContent key="upload-comprobante-content">
+          <DialogHeader key="upload-comprobante-header">
+            <DialogTitle key="upload-comprobante-title" className="flex items-center gap-2">
+              <Receipt key="upload-comprobante-icon" className="h-5 w-5" />
               Subir Comprobante de Pago
             </DialogTitle>
-            <DialogDescription>
-              Factura <strong>{uploadingInvoice?.numero_factura}</strong> de <strong>{uploadingInvoice?.nombre_proveedor}</strong>
-              <br />
-              <strong>Monto: {uploadingInvoice && formatCurrency(uploadingInvoice.monto)}</strong>
+            <DialogDescription key="upload-comprobante-desc">
+              Factura <strong key="upload-comprobante-num">{uploadingInvoice?.numero_factura}</strong> de <strong key="upload-comprobante-provider">{uploadingInvoice?.nombre_proveedor}</strong>
+              <br key="upload-comprobante-br" />
+              <strong key="upload-comprobante-monto">Monto: {uploadingInvoice && formatCurrency(uploadingInvoice.monto)}</strong>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Comprobante de Pago (PDF)</Label>
+          <div key="upload-comprobante-body" className="space-y-4">
+            <div key="upload-comprobante-input-wrapper">
+              <Label key="upload-comprobante-label">Comprobante de Pago (PDF)</Label>
               <Input
+                key="upload-comprobante-input"
                 type="file"
                 accept=".pdf"
                 onChange={handleComprobanteFileSelect}
                 className="mt-2"
               />
               {comprobanteFile && (
-                <p className="text-sm text-slate-600 mt-2">
+                <p key="upload-comprobante-file-name" className="text-sm text-slate-600 mt-2">
                   Archivo: {comprobanteFile.name}
                 </p>
               )}
             </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowComprobanteUpload(false)} className="flex-1">
+            <div key="upload-comprobante-buttons" className="flex gap-3 pt-4">
+              <Button key="upload-comprobante-cancel" variant="outline" onClick={() => dialogManager.closeDialog()} className="flex-1">
                 Cancelar
               </Button>
               <Button 
+                key="upload-comprobante-submit"
                 onClick={handleUploadComprobante} 
                 disabled={!comprobanteFile || uploadingComprobante}
                 className="flex-1"
