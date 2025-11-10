@@ -323,8 +323,8 @@ async def update_empresa(empresa_id: str, empresa_update: EmpresaCreate, current
 
 
 @api_router.post("/upload-pdf/{empresa_id}")
-async def upload_pdf(empresa_id: str, file: UploadFile = File(...)):
-    """Procesa un PDF y extrae datos de la factura usando Gemini 2.5 Pro"""
+async def upload_pdf(empresa_id: str, file: UploadFile = File(...), current_user: UserData = Depends(require_admin)):
+    """Procesa un PDF y extrae datos de la factura usando Gemini 2.5 Pro - Solo admin"""
     try:
         # Verificar que la empresa existe
         empresa = await db.empresas.find_one({"id": empresa_id, "activa": True})
