@@ -287,8 +287,8 @@ async def create_empresa(empresa: EmpresaCreate, current_user: UserData = Depend
 
 
 @api_router.get("/empresas/{empresa_id}", response_model=Empresa)
-async def get_empresa(empresa_id: str):
-    """Obtiene una empresa específica"""
+async def get_empresa(empresa_id: str, current_user: UserData = Depends(get_current_user)):
+    """Obtiene una empresa específica - Requiere autenticación"""
     try:
         empresa = await db.empresas.find_one({"id": empresa_id, "activa": True})
         if not empresa:
