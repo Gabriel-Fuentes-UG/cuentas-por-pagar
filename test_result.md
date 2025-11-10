@@ -252,11 +252,11 @@ backend:
 frontend:
   - task: "Fix persistent removeChild DOM error"
     implemented: true
-    working: true
+    working: false
     file: "/app/frontend/src/App.js"
-    stuck_count: 5
+    stuck_count: 6
     priority: "critical"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: false
         agent: "user"
@@ -288,6 +288,12 @@ frontend:
       - working: true
         agent: "main"
         comment: "TRUE ROOT CAUSE FOUND: Troubleshoot agent identified error originates from Radix UI Dialog components using portals, not download functionality. Added DialogErrorBoundary class component to catch and handle portal removeChild errors gracefully. Comprehensive dialog testing (rapid open/close cycles, mixed with downloads) shows ZERO removeChild errors. Issue definitively resolved."
+      - working: false
+        agent: "user"
+        comment: "ERROR PERSISTS AGAIN: User confirms via uploaded image artifact that removeChild error still occurs despite all previous fixes including downloadFile refactorings."
+      - working: "in-progress"
+        agent: "main"
+        comment: "ARCHITECTURAL FIX IN PROGRESS: Troubleshoot agent identified true root cause - React 18 concurrent rendering + multiple simultaneous dialogs (12 dialog states) + missing React keys creating portal cleanup race conditions. Implementing comprehensive fix: 1) Upgraded @radix-ui/react-dialog from 1.1.11 to 1.1.15 2) Created useDialogManager hook with mutex pattern (only one dialog open at time) 3) Memoized PasswordDialog component with React.memo() 4) Added stable React keys to all conditional elements in dialogs 5) Improved downloadFile with requestAnimationFrame to avoid React render cycle conflicts. This is an architectural solution targeting the actual problem."
 
   - task: "File download functionality"
     implemented: true
