@@ -1586,6 +1586,7 @@ const InvoiceManager = React.memo(({
 
 // Main App component
 function App() {
+  const { isAuthenticated, loading, logout, isAdmin, isReadOnly, user } = useAuth();
   const [view, setView] = useState("empresas");
   const [empresa, setEmpresa] = useState(null);
   const [empresas, setEmpresas] = useState([]);
@@ -1595,6 +1596,23 @@ function App() {
 
   const { toast } = useToast();
   const downloadFile = useDownload();
+
+  // Show loading screen while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <Login />;
+  }
 
   // Load empresas on mount
   useEffect(() => {
