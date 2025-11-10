@@ -1743,6 +1743,43 @@ function App() {
     }
   }, [empresa, view, isAuthenticated]);
 
+  // Company navigation functions (MUST BE HOOKS, DEFINED HERE)
+  const selectEmpresa = useCallback((emp) => {
+    try {
+      setInvoices([]);
+      setResumen(null);
+      setEstadoPagadas(null);
+      setEmpresa(emp);
+      setView("empresa-detail");
+      console.log('[NAVIGATION] Selected empresa:', emp.nombre);
+    } catch (error) {
+      console.error('[NAVIGATION ERROR] Error selecting empresa:', error);
+      toast({ 
+        title: "Error", 
+        description: "Error al seleccionar empresa", 
+        variant: "destructive" 
+      });
+    }
+  }, [toast]);
+
+  const backToEmpresas = useCallback(() => {
+    try {
+      setInvoices([]);
+      setResumen(null);
+      setEstadoPagadas(null);
+      setEmpresa(null);
+      setView("empresas");
+      setTimeout(() => {
+        loadEmpresas();
+      }, 100);
+      console.log('[NAVIGATION] Returned to empresas view');
+    } catch (error) {
+      console.error('[NAVIGATION ERROR]', error);
+      setView("empresas");
+      setEmpresa(null);
+    }
+  }, []);
+
   // Show loading screen while checking authentication
   if (loading) {
     return (
