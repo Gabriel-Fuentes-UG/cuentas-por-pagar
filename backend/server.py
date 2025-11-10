@@ -622,8 +622,8 @@ async def upload_comprobante_pago(invoice_id: str, file: UploadFile = File(...),
 
 
 @api_router.post("/invoices/{invoice_id}/upload-xml")
-async def upload_xml_file(invoice_id: str, file: UploadFile = File(...)):
-    """Sube un archivo XML para una factura"""
+async def upload_xml_file(invoice_id: str, file: UploadFile = File(...), current_user: UserData = Depends(require_admin)):
+    """Sube un archivo XML para una factura - Solo admin"""
     try:
         # Verificar que la factura existe
         invoice = await db.invoices.find_one({"id": invoice_id})
