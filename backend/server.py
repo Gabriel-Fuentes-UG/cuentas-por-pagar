@@ -489,8 +489,8 @@ async def get_invoices(empresa_id: str, estado: Optional[str] = None, proveedor:
 
 
 @api_router.put("/invoices/{invoice_id}/estado")
-async def update_invoice_status(invoice_id: str, update: InvoiceUpdate):
-    """Actualiza el estado de pago de una factura"""
+async def update_invoice_status(invoice_id: str, update: InvoiceUpdate, current_user: UserData = Depends(require_admin)):
+    """Actualiza el estado de pago de una factura - Solo admin"""
     try:
         result = await db.invoices.update_one(
             {"id": invoice_id},
