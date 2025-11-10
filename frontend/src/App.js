@@ -24,11 +24,12 @@ const API = `${BACKEND_URL}/api`;
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorCount: 0 };
+    this.state = { hasError: false, error: null };
+    this.errorTimer = null;
   }
 
   static getDerivedStateFromError(error) {
-    // Filter out known benign errors
+    // Filter out known benign errors - return null to prevent state update
     const errorMessage = error?.message || '';
     const isBenignError = 
       errorMessage.includes('removeChild') || 
@@ -39,12 +40,14 @@ class ErrorBoundary extends React.Component {
       errorMessage.includes('NetworkError');
     
     if (isBenignError) {
-      console.warn('[SUPPRESSED BY ERROR BOUNDARY] Benign error:', errorMessage.substring(0, 100));
-      return { hasError: false, error: null }; // Don't show error screen
+      console.warn('[ERROR BOUNDARY] Suppressed benign error:', errorMessage.substring(0, 80));
+      // Return null to indicate no state update needed
+      return null;
     }
     
-    // For real errors, increment counter but don't break the app immediately
-    return { hasError: true, error, errorCount: 0 };
+    // For real errors, set error state
+    console.error('[ERROR BOUNDARY] Real error detected:', errorMessage);
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
@@ -52,19 +55,50 @@ class ErrorBoundary extends React.Component {
     const isBenignError = 
       errorMessage.includes('removeChild') || 
       errorMessage.includes('eliminar no es un hijo') ||
-      errorMessage.includes('ResizeObserver') ||
-      errorMessage.includes('Failed to fetch');
+      errorMessage.includes('ResizeObserver');
     
     if (!isBenignError) {
-      console.error('React Error Boundary caught an error:', error, errorInfo);
+      console.error('[ERROR BOUNDARY] Error details:', error, errorInfo);
+      
+      // Auto-clear error after 3 seconds to allow recovery
+      if (this.errorTimer) clearTimeout(this.errorTimer);
+      this.errorTimer = setTimeout(() => {
+        console.warn('[ERROR BOUNDARY] Auto-clearing error state');
+        this.setState({ hasError: false, error: null });
+      }, 3000);
     }
   }
 
-  // Removed auto-recovery to prevent interference with button clicks
+  componentWillUnmount() {
+    if (this.errorTimer) {
+      clearTimeout(this.errorTimer);
+    }
+  }
 
   render() {
-    // Don't show error screen for benign errors - they're already filtered
-    // If hasError is true for a real error, just render children anyway to avoid blocking the app
+    // Only show error screen for real, critical errors
+    if (this.state.hasError && this.state.error) {
+      const errorMessage = this.state.error?.message || '';
+      
+      // Double-check: even if we're here, if it's benign, don't show error screen
+      if (errorMessage.includes('removeChild') || 
+          errorMessage.includes('eliminar no es un hijo')) {
+        console.warn('[ERROR BOUNDARY] Benign error in render, showing children anyway');
+        return this.props.children;
+      }
+      
+      // For real errors, show minimal error indicator
+      return (
+        <div className="min-h-screen bg-slate-50">
+          {this.props.children}
+          <div className="fixed bottom-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg max-w-sm">
+            <p className="text-red-800 font-medium text-sm">⚠️ Se detectó un error</p>
+            <p className="text-red-600 text-xs mt-1">La aplicación intentará recuperarse automáticamente...</p>
+          </div>
+        </div>
+      );
+    }
+
     return this.props.children;
   }
 }
