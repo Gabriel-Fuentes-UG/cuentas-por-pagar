@@ -2001,11 +2001,18 @@ function App() {
   const exportResumen = async () => {
     if (!empresa) return;
     try {
-      const res = await axios.get(`${API}/export/resumen-general/${empresa.id}`, { responseType: 'blob' });
+      const token = localStorage.getItem('auth_token');
+      const res = await axios.get(`${API}/export/resumen-general/${empresa.id}`, { 
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       downloadFile(res.data, `resumen_general_${empresa.nombre.replace(/\s+/g, '_')}.xlsx`);
       toast({ title: "Exportado", description: "Excel de resumen general descargado" });
     } catch (error) {
-      toast({ title: "Error", description: "No se pudo exportar", variant: "destructive" });
+      console.error('Error exportando resumen:', error);
+      toast({ title: "Error", description: error.response?.data?.detail || "No se pudo exportar", variant: "destructive" });
     }
   };
 
