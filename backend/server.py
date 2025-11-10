@@ -302,8 +302,8 @@ async def get_empresa(empresa_id: str):
 
 
 @api_router.put("/empresas/{empresa_id}", response_model=Empresa)
-async def update_empresa(empresa_id: str, empresa_update: EmpresaCreate):
-    """Actualiza una empresa"""
+async def update_empresa(empresa_id: str, empresa_update: EmpresaCreate, current_user: UserData = Depends(require_admin)):
+    """Actualiza una empresa - Solo admin"""
     try:
         result = await db.empresas.update_one(
             {"id": empresa_id, "activa": True},
