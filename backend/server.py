@@ -577,8 +577,8 @@ async def update_invoice_number(invoice_id: str, update: InvoiceNumberUpdate, cu
 
 
 @api_router.post("/invoices/{invoice_id}/upload-comprobante")
-async def upload_comprobante_pago(invoice_id: str, file: UploadFile = File(...)):
-    """Sube un comprobante de pago para una factura"""
+async def upload_comprobante_pago(invoice_id: str, file: UploadFile = File(...), current_user: UserData = Depends(require_admin)):
+    """Sube un comprobante de pago para una factura - Solo admin"""
     try:
         # Verificar que la factura existe
         invoice = await db.invoices.find_one({"id": invoice_id})
