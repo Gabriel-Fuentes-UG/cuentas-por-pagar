@@ -1837,53 +1837,7 @@ function App() {
     }
   };
 
-  // Company actions
-  const selectEmpresa = useCallback((emp) => {
-    try {
-      // Clear previous state
-      setInvoices([]);
-      setResumen(null);
-      setEstadoPagadas(null);
-      
-      // Set new empresa and view
-      setEmpresa(emp);
-      setView("empresa-detail");
-      
-      console.log('[NAVIGATION] Selected empresa:', emp.nombre);
-    } catch (error) {
-      console.error('[NAVIGATION ERROR] Error selecting empresa:', error);
-      toast({ 
-        title: "Error", 
-        description: "Error al seleccionar empresa", 
-        variant: "destructive" 
-      });
-    }
-  }, [toast]);
-
-  const backToEmpresas = useCallback(() => {
-    try {
-      // Clear invoice-related state first
-      setInvoices([]);
-      setResumen(null);
-      setEstadoPagadas(null);
-      
-      // Then update view state
-      setEmpresa(null);
-      setView("empresas");
-      
-      // Force reload of empresas to ensure fresh data
-      setTimeout(() => {
-        loadEmpresas();
-      }, 100);
-      
-      console.log('[NAVIGATION] Returned to empresas view');
-    } catch (error) {
-      console.error('[NAVIGATION ERROR]', error);
-      // Fallback: force navigation even if there's an error
-      setView("empresas");
-      setEmpresa(null);
-    }
-  }, []);
+  // Company actions - NOW DEFINED AS HOOKS AT THE TOP
 
   const createEmpresa = async (empresaForm) => {
     if (!empresaForm.nombre.trim()) {
