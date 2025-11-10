@@ -1933,11 +1933,18 @@ function App() {
   // Download functions using the safe download hook
   const downloadPDF = async (invoiceId, numeroFactura) => {
     try {
-      const res = await axios.get(`${API}/invoices/${invoiceId}/download`, { responseType: 'blob' });
+      const token = localStorage.getItem('auth_token');
+      const res = await axios.get(`${API}/invoices/${invoiceId}/download`, { 
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       downloadFile(res.data, `factura_${numeroFactura}.pdf`);
       toast({ title: "Descarga iniciada", description: `PDF de factura ${numeroFactura}` });
     } catch (error) {
-      toast({ title: "Error", description: "No se pudo descargar", variant: "destructive" });
+      console.error('Error descargando PDF:', error);
+      toast({ title: "Error", description: error.response?.data?.detail || "No se pudo descargar el PDF", variant: "destructive" });
     }
   };
 
