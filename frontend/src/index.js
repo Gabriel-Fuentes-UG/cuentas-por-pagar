@@ -71,10 +71,10 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   observer.observe(document.documentElement, { childList: true, subtree: true });
 }
 
-// Use legacy rendering to minimize React 18 concurrent rendering conflicts
-ReactDOM.render(
+// Use React 18 createRoot API
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(
   <AuthProvider>
     <App />
-  </AuthProvider>, 
-  document.getElementById("root")
+  </AuthProvider>
 );
