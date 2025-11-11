@@ -599,7 +599,7 @@ async def upload_comprobante_pago(invoice_id: str, file: UploadFile = File(...),
         
         # Crear nombre único para el archivo
         unique_filename = f"comprobante_{uuid.uuid4()}_{file.filename}"
-        file_path = f"/app/uploads/{unique_filename}"
+        file_path = f"{UPLOAD_DIR}/{unique_filename}"
         
         # Guardar archivo
         content = await file.read()
