@@ -644,7 +644,7 @@ async def upload_xml_file(invoice_id: str, file: UploadFile = File(...), current
         
         # Crear nombre único para el archivo
         unique_filename = f"xml_{uuid.uuid4()}_{file.filename}"
-        file_path = f"/app/uploads/{unique_filename}"
+        file_path = f"{UPLOAD_DIR}/{unique_filename}"
         
         # Guardar archivo
         content = await file.read()
