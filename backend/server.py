@@ -842,7 +842,7 @@ async def delete_invoice(invoice_id: str, current_user: UserData = Depends(requi
         
         # Eliminar el archivo PDF si existe
         if invoice.get('archivo_pdf'):
-            file_path = f"/app/uploads/{invoice['archivo_pdf']}"
+            file_path = f"{UPLOAD_DIR}/{invoice['archivo_pdf']}"
             if os.path.exists(file_path):
                 try:
                     os.unlink(file_path)
@@ -852,7 +852,7 @@ async def delete_invoice(invoice_id: str, current_user: UserData = Depends(requi
         
         # Eliminar el comprobante de pago si existe
         if invoice.get('comprobante_pago'):
-            comprobante_path = f"/app/uploads/{invoice['comprobante_pago']}"
+            comprobante_path = f"{UPLOAD_DIR}/{invoice['comprobante_pago']}"
             if os.path.exists(comprobante_path):
                 try:
                     os.unlink(comprobante_path)
@@ -862,7 +862,7 @@ async def delete_invoice(invoice_id: str, current_user: UserData = Depends(requi
         
         # Eliminar el archivo XML si existe
         if invoice.get('archivo_xml'):
-            xml_path = f"/app/uploads/{invoice['archivo_xml']}"
+            xml_path = f"{UPLOAD_DIR}/{invoice['archivo_xml']}"
             if os.path.exists(xml_path):
                 try:
                     os.unlink(xml_path)
