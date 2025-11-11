@@ -688,7 +688,7 @@ async def download_invoice_pdf(invoice_id: str, current_user: UserData = Depends
             raise HTTPException(status_code=404, detail="No hay archivo PDF asociado a esta factura")
         
         # Construir la ruta del archivo
-        file_path = f"/app/uploads/{invoice['archivo_pdf']}"
+        file_path = f"{UPLOAD_DIR}/{invoice['archivo_pdf']}"
         
         # Verificar que el archivo existe
         if not os.path.exists(file_path):
