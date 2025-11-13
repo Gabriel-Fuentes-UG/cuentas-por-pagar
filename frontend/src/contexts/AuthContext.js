@@ -11,7 +11,8 @@ export const useAuth = () => {
   return context;
 };
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// Use relative URL in production if env var is not set
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || window.location.origin;
 const API = `${BACKEND_URL}/api`;
 
 export const AuthProvider = ({ children }) => {

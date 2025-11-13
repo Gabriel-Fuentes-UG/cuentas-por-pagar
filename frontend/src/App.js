@@ -16,7 +16,8 @@ import { Toaster } from "./components/ui/sonner";
 import { useAuth } from "./contexts/AuthContext";
 import Login from "./components/Login";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// Use relative URL in production if env var is not set
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || window.location.origin;
 const API = `${BACKEND_URL}/api`;
 
 // Error Boundary to catch and handle React errors gracefully
